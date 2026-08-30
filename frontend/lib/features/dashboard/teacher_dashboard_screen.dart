@@ -132,7 +132,10 @@ class TeacherDashboardScreen extends ConsumerWidget {
                             'Take Attendance',
                             Icons.camera_alt,
                             () {
-                              // TODO: Navigate to attendance taking
+                              // TODO: Navigate to attendance session selection/scanner
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Attendance session management coming soon')),
+                              );
                             },
                           ),
                           _buildActionCard(

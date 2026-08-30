@@ -12,6 +12,7 @@ import '../features/students/add_student_screen.dart';
 import '../features/students/edit_student_screen.dart';
 import '../features/students/student_details_screen.dart';
 import '../features/students/face_enrollment_screen.dart';
+import '../features/attendance/attendance_scanner_screen.dart';
 
 // Import providers
 import '../providers/auth_provider.dart';
@@ -122,6 +123,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             studentName: extra?['studentName'] ?? 'Student',
             studentIdStr: extra?['studentIdStr'] ?? 'ID',
           );
+        },
+      ),
+      GoRoute(
+        path: '/attendance/scanner/:sessionId',
+        name: 'attendance-scanner',
+        builder: (context, state) {
+          final sessionId = int.parse(state.pathParameters['sessionId']!);
+          return AttendanceScannerScreen(sessionId: sessionId);
         },
       ),
     ],

@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     YUNET_MODEL_URL: str = "https://github.com/opencv/opencv_zoo/raw/master/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
     SFACE_MODEL_URL: str = "https://github.com/opencv/opencv_zoo/raw/master/models/face_recognition_sface/face_recognition_sface_2021dec.onnx"
     FACE_MATCH_THRESHOLD: float = 0.363
+    FACE_RECOGNITION_THRESHOLD: float = 0.363  # Cosine similarity threshold for attendance recognition
     
     # Models storage folder relative to current file or absolute
     MODELS_DIR: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "facial_recognition", "models")

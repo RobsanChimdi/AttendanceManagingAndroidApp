@@ -22,9 +22,11 @@ app = FastAPI(
 from app.routers.auth import router as auth_router
 from app.routers.students import router as students_router
 from app.routers.classes import router as classes_router
+from app.routers.attendance import router as attendance_router
 app.include_router(auth_router)
 app.include_router(students_router)
 app.include_router(classes_router)
+app.include_router(attendance_router)
 
 
 # CORS configurations
