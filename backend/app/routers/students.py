@@ -1,23 +1,48 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.database import get_db
 from app.services.student_service import StudentService
-from app.schemas.student import StudentCreate, StudentUpdate, StudentResponse
+from app.schemas.student import StudentCreate, StudentUpdate, StudentResponse, StudentStatus
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/students", tags=["Students"])
 
-@router.get("/", response_model=List[StudentResponse])
+class StudentFilterResponse(BaseModel):
+    students: List[StudentResponse]
+    total: int
+    skip: int
+    limit: int
+
+@router.get("/", response_model=StudentFilterResponse)
 def list_students(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
+    class_id: Optional[int] = Query(None),
+    grade: Optional[str] = Query(None),
+    section: Optional[str] = Query(None),
+    status: Optional[StudentStatus] = Query(None),
+    search: Optional[str] = Query(None),
+    sort_by: Optional[str] = Query(None, description="Field to sort by: first_name, last_name, student_id, grade, section, status"),
+    sort_order: Optional[str] = Query("asc", regex="^(asc|desc)$"),
     db: Session = Depends(get_db)
 ):
     """
-    List all registered students with pagination.
+    List all registered students with pagination, filtering, search, and sorting.
     """
     student_service = StudentService(db)
-    return student_service.list_students(skip=skip, limit=limit)
+    result = student_service.filter_students(
+        skip=skip,
+        limit=limit,
+        class_id=class_id,
+        grade=grade,
+        section=section,
+        status=status,
+        search=search,
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
+    return result
 
 @router.get("/student-id/{student_id}", response_model=StudentResponse)
 def get_student_by_student_id(student_id: str, db: Session = Depends(get_db)):
@@ -85,6 +110,14 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     student_service = StudentService(db)
     student_service.delete_student(student_id)
     return None
+
+@router.patch("/{student_id}/deactivate", response_model=StudentResponse)
+def deactivate_student(student_id: int, db: Session = Depends(get_db)):
+    """
+    Deactivate a student (soft delete).
+    """
+    student_service = StudentService(db)
+    return student_service.deactivate_student(student_id)
 
 @router.post("/{student_id}/enroll-face")
 async def enroll_face(student_id: str, file: UploadFile = File(...), db: Session = Depends(get_db)):

@@ -7,6 +7,10 @@ import '../features/auth/login_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/dashboard/admin_dashboard_screen.dart';
 import '../features/dashboard/teacher_dashboard_screen.dart';
+import '../features/students/students_screen.dart';
+import '../features/students/add_student_screen.dart';
+import '../features/students/edit_student_screen.dart';
+import '../features/students/student_details_screen.dart';
 
 // Import providers
 import '../providers/auth_provider.dart';
@@ -79,6 +83,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/',
         name: 'dashboard',
         builder: (context, state) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: '/students',
+        name: 'students',
+        builder: (context, state) => const StudentsScreen(),
+      ),
+      GoRoute(
+        path: '/students/add',
+        name: 'add-student',
+        builder: (context, state) => const AddStudentScreen(),
+      ),
+      GoRoute(
+        path: '/students/:studentId',
+        name: 'student-details',
+        builder: (context, state) {
+          final studentId = int.parse(state.pathParameters['studentId']!);
+          return StudentDetailsScreen(studentId: studentId);
+        },
+      ),
+      GoRoute(
+        path: '/students/:studentId/edit',
+        name: 'edit-student',
+        builder: (context, state) {
+          final studentId = int.parse(state.pathParameters['studentId']!);
+          return EditStudentScreen(studentId: studentId);
+        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

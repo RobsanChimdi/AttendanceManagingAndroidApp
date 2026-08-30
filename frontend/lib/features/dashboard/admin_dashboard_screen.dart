@@ -132,7 +132,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                             'Manage Students',
                             Icons.people,
                             () {
-                              // TODO: Navigate to students management
+                              context.push('/students');
                             },
                           ),
                           _buildActionCard(

@@ -140,7 +140,7 @@ class TeacherDashboardScreen extends ConsumerWidget {
                             'View Students',
                             Icons.people,
                             () {
-                              // TODO: Navigate to students list
+                              context.push('/students');
                             },
                           ),
                           _buildActionCard(

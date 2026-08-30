@@ -1,10 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.repositories.student_repository import StudentRepository
 from app.repositories.class_repository import ClassRepository
 from app.schemas.student import StudentCreate, StudentUpdate
-from app.models.student import Student
+from app.models.student import Student, StudentStatus
 
 class StudentService:
     def __init__(self, db: Session):
@@ -32,6 +32,45 @@ class StudentService:
 
     def list_students(self, skip: int = 0, limit: int = 100) -> List[Student]:
         return self.student_repo.get_all(skip=skip, limit=limit)
+
+    def filter_students(
+        self,
+        skip: int = 0,
+        limit: int = 100,
+        class_id: Optional[int] = None,
+        grade: Optional[str] = None,
+        section: Optional[str] = None,
+        status: Optional[StudentStatus] = None,
+        search: Optional[str] = None,
+        sort_by: Optional[str] = None,
+        sort_order: Optional[str] = None
+    ) -> Dict[str, Any]:
+        students = self.student_repo.filter_students(
+            skip=skip,
+            limit=limit,
+            class_id=class_id,
+            grade=grade,
+            section=section,
+            status=status,
+            search=search,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
+        
+        total = self.student_repo.count_students(
+            class_id=class_id,
+            grade=grade,
+            section=section,
+            status=status,
+            search=search
+        )
+        
+        return {
+            "students": students,
+            "total": total,
+            "skip": skip,
+            "limit": limit
+        }
 
     def create_student(self, student_in: StudentCreate) -> Student:
         # Check if student_id already exists
@@ -65,6 +104,11 @@ class StudentService:
                 )
         
         update_data = student_in.model_dump(exclude_unset=True)
+        return self.student_repo.update(student, update_data)
+
+    def deactivate_student(self, student_id: int) -> Student:
+        student = self.get_student(student_id)
+        update_data = {"status": StudentStatus.INACTIVE}
         return self.student_repo.update(student, update_data)
 
     def delete_student(self, student_id: int) -> Student:
