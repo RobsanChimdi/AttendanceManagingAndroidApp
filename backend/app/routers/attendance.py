@@ -5,8 +5,11 @@ from app.repositories.attendance_session_repository import AttendanceSessionRepo
 from app.repositories.face_embedding_repository import FaceEmbeddingRepository
 from app.repositories.attendance_repository import AttendanceRepository
 from app.repositories.student_repository import StudentRepository
+from app.repositories.class_repository import ClassRepository
 from app.models.attendance_session import SessionStatus
 from app.models.attendance import AttendanceStatus, AttendanceMethod
+from app.services.attendance_session_service import AttendanceSessionService
+from app.schemas.attendance_session import AttendanceSessionCreate, AttendanceSessionResponse
 from app.config import settings
 import pickle
 import numpy as np
@@ -15,6 +18,131 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
+
+# Session Management Endpoints
+
+@router.post("/sessions", response_model=AttendanceSessionResponse, status_code=status.HTTP_201_CREATED)
+def create_session(
+    session_data: AttendanceSessionCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new attendance session.
+    """
+    try:
+        session_service = AttendanceSessionService(db)
+        return session_service.create_session(session_data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating attendance session: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create attendance session: {str(e)}"
+        )
+
+@router.get("/sessions/{session_id}", response_model=AttendanceSessionResponse)
+def get_session(
+    session_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get attendance session by ID.
+    """
+    try:
+        session_service = AttendanceSessionService(db)
+        return session_service.get_session(session_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting attendance session: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get attendance session: {str(e)}"
+        )
+
+@router.post("/sessions/{session_id}/start", response_model=AttendanceSessionResponse)
+def start_session(
+    session_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Start an attendance session (change status to OPEN).
+    """
+    try:
+        session_service = AttendanceSessionService(db)
+        return session_service.start_session(session_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error starting attendance session: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to start attendance session: {str(e)}"
+        )
+
+@router.post("/sessions/{session_id}/close")
+def close_session(
+    session_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Close an attendance session and mark remaining students as absent.
+    """
+    try:
+        session_service = AttendanceSessionService(db)
+        result = session_service.close_session(session_id)
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error closing attendance session: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to close attendance session: {str(e)}"
+        )
+
+@router.get("/sessions/{session_id}/statistics")
+def get_session_statistics(
+    session_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get attendance statistics for a session.
+    """
+    try:
+        session_service = AttendanceSessionService(db)
+        return session_service.get_session_statistics(session_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting session statistics: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get session statistics: {str(e)}"
+        )
+
+@router.get("/sessions/{session_id}/attendance")
+def get_session_attendance(
+    session_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all attendance records for a session with student details.
+    """
+    try:
+        session_service = AttendanceSessionService(db)
+        return session_service.get_session_attendance(session_id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting session attendance: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get session attendance: {str(e)}"
+        )
+
+# Face Recognition Endpoint
 
 @router.post("/sessions/{session_id}/recognize")
 async def recognize_face(

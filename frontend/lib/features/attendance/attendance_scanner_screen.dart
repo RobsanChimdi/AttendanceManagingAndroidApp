@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'dart:async';
 import '../../services/attendance_service.dart';
+import '../../services/attendance_session_service.dart';
 
 class AttendanceScannerScreen extends ConsumerStatefulWidget {
   final int sessionId;
@@ -21,6 +22,7 @@ class AttendanceScannerScreen extends ConsumerStatefulWidget {
 
 class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScreen> {
   final AttendanceService _attendanceService = AttendanceService();
+  final AttendanceSessionService _sessionService = AttendanceSessionService();
   
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
@@ -36,22 +38,30 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
   double? _confidence;
   bool _alreadyMarked = false;
   
+  // Session statistics
+  Map<String, dynamic>? _sessionStats;
+  List<dynamic>? _recentRecognitions;
+  
   // Cooldown and sampling
   Timer? _recognitionCooldown;
+  Timer? _statsRefreshTimer;
   static const _cooldownDuration = Duration(seconds: 3);
-  static const _frameSamplingInterval = Duration(milliseconds: 500);
+  static const _statsRefreshInterval = Duration(seconds: 5);
   DateTime? _lastRecognitionTime;
 
   @override
   void initState() {
     super.initState();
     _initializeCamera();
+    _loadSessionStatistics();
+    _startStatsRefreshTimer();
   }
 
   @override
   void dispose() {
     _cameraController?.dispose();
     _recognitionCooldown?.cancel();
+    _statsRefreshTimer?.cancel();
     super.dispose();
   }
 
@@ -62,7 +72,6 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
     });
 
     try {
-      // Request camera permission
       final status = await Permission.camera.request();
       
       if (!status.isGranted) {
@@ -75,7 +84,6 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         return;
       }
 
-      // Get available cameras
       _cameras = await availableCameras();
       
       if (_cameras == null || _cameras!.isEmpty) {
@@ -88,7 +96,6 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         return;
       }
 
-      // Initialize camera (prefer front camera for face recognition)
       final frontCamera = _cameras!.firstWhere(
         (camera) => camera.lensDirection == CameraLensDirection.front,
         orElse: () => _cameras!.first,
@@ -118,14 +125,34 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
     }
   }
 
+  void _startStatsRefreshTimer() {
+    _statsRefreshTimer = Timer.periodic(_statsRefreshInterval, (_) {
+      _loadSessionStatistics();
+    });
+  }
+
+  Future<void> _loadSessionStatistics() async {
+    try {
+      final stats = await _sessionService.getSessionStatistics(widget.sessionId);
+      final attendance = await _sessionService.getSessionAttendance(widget.sessionId);
+      
+      if (mounted) {
+        setState(() {
+          _sessionStats = stats;
+          _recentRecognitions = attendance.take(5).toList();
+        });
+      }
+    } catch (e) {
+      // Don't show error for stats refresh failures
+    }
+  }
+
   Future<void> _captureAndRecognize() async {
-    // Check cooldown
     if (_lastRecognitionTime != null &&
         DateTime.now().difference(_lastRecognitionTime!) < _cooldownDuration) {
       return;
     }
 
-    // Check if already recognizing
     if (_isRecognizing) {
       return;
     }
@@ -157,7 +184,9 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         _lastRecognitionTime = DateTime.now();
       });
 
-      // Start cooldown timer
+      // Refresh stats after recognition
+      _loadSessionStatistics();
+
       _recognitionCooldown?.cancel();
       _recognitionCooldown = Timer(_cooldownDuration, () {
         if (mounted) {
@@ -195,16 +224,69 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
     });
   }
 
+  void _showCloseConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Close Attendance Session'),
+        content: const Text(
+          'Students who have not been marked present will be marked absent. Do you want to continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _closeSession();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Close Session'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _closeSession() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _sessionService.closeSession(widget.sessionId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Attendance session closed successfully')),
+        );
+        context.pop();
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Attendance Scanner'),
+        title: const Text('Live Attendance Scanner'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _resetRecognition,
             tooltip: 'Reset',
+          ),
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: _showCloseConfirmation,
+            tooltip: 'Close Session',
           ),
         ],
       ),
@@ -248,6 +330,40 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
   Widget _buildScannerView() {
     return Column(
       children: [
+        // Statistics header
+        if (_sessionStats != null)
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            color: Colors.blue.shade50,
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatCard('Expected', _sessionStats!['total_students'].toString(), Icons.people),
+                    _buildStatCard('Present', _sessionStats!['present_count'].toString(), Icons.check_circle, Colors.green),
+                    _buildStatCard('Absent', _sessionStats!['absent_count'].toString(), Icons.cancel, Colors.red),
+                    _buildStatCard('Remaining', _sessionStats!['remaining_count'].toString(), Icons.hourglass_empty, Colors.orange),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                LinearProgressIndicator(
+                  value: _sessionStats!['attendance_percentage'] / 100,
+                  backgroundColor: Colors.grey.shade300,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _sessionStats!['attendance_percentage'] >= 75 ? Colors.green :
+                    _sessionStats!['attendance_percentage'] >= 50 ? Colors.orange : Colors.red,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Attendance: ${_sessionStats!['attendance_percentage'].toStringAsFixed(1)}%',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        
         // Camera preview
         Expanded(
           child: Stack(
@@ -260,15 +376,52 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
                       )
                     : const Center(child: CircularProgressIndicator()),
               ),
-              // Face guide overlay
               if (_isCameraInitialized)
                 _buildFaceGuideOverlay(),
-              // Recognition status overlay
               if (_recognitionStatus != null)
                 _buildRecognitionStatusOverlay(),
             ],
           ),
         ),
+        
+        // Recent recognitions
+        if (_recentRecognitions != null && _recentRecognitions!.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            height: 150,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Recent Recognitions',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _recentRecognitions!.length,
+                    itemBuilder: (context, index) {
+                      final record = _recentRecognitions![index];
+                      return ListTile(
+                        dense: true,
+                        leading: Icon(
+                          record['status'] == 'PRESENT' ? Icons.check_circle : Icons.cancel,
+                          color: record['status'] == 'PRESENT' ? Colors.green : Colors.red,
+                          size: 20,
+                        ),
+                        title: Text(record['student_name']),
+                        subtitle: Text(record['student_id_str']),
+                        trailing: Text(
+                          record['recognized_at']?.toString().split('T')[1].split('.')[0] ?? '',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
         
         // Controls
         Container(
@@ -330,6 +483,23 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
     );
   }
 
+  Widget _buildStatCard(String label, String value, IconData icon, [Color color = Colors.blue]) {
+    return Column(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+      ],
+    );
+  }
+
   Widget _buildFaceGuideOverlay() {
     return Center(
       child: Container(
@@ -344,34 +514,12 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         ),
         child: Stack(
           children: [
-            // Corner guides
-            Positioned(
-              top: 10,
-              left: 10,
-              child: _buildCornerMarker(TopLeft),
-            ),
-            Positioned(
-              top: 10,
-              right: 10,
-              child: _buildCornerMarker(TopRight),
-            ),
-            Positioned(
-              bottom: 10,
-              left: 10,
-              child: _buildCornerMarker(BottomLeft),
-            ),
-            Positioned(
-              bottom: 10,
-              right: 10,
-              child: _buildCornerMarker(BottomRight),
-            ),
-            // Center guide
+            Positioned(top: 10, left: 10, child: _buildCornerMarker(TopLeft)),
+            Positioned(top: 10, right: 10, child: _buildCornerMarker(TopRight)),
+            Positioned(bottom: 10, left: 10, child: _buildCornerMarker(BottomLeft)),
+            Positioned(bottom: 10, right: 10, child: _buildCornerMarker(BottomRight)),
             const Center(
-              child: Icon(
-                Icons.face,
-                size: 80,
-                color: Colors.white54,
-              ),
+              child: Icon(Icons.face, size: 80, color: Colors.white54),
             ),
           ],
         ),
@@ -502,7 +650,6 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
                     const SizedBox(width: 8),
                     ElevatedButton.icon(
                       onPressed: () {
-                        // TODO: Implement QR fallback
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('QR scanning coming soon')),
                         );

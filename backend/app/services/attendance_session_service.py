@@ -1,12 +1,15 @@
-from typing import List
+from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from datetime import datetime
 from app.repositories.attendance_session_repository import AttendanceSessionRepository
 from app.repositories.class_repository import ClassRepository
 from app.repositories.user_repository import UserRepository
+from app.repositories.student_repository import StudentRepository
+from app.repositories.attendance_repository import AttendanceRepository
 from app.schemas.attendance_session import AttendanceSessionCreate, AttendanceSessionUpdate
 from app.models.attendance_session import AttendanceSession, SessionStatus
+from app.models.attendance import AttendanceStatus, AttendanceMethod
 
 class AttendanceSessionService:
     def __init__(self, db: Session):
@@ -14,6 +17,8 @@ class AttendanceSessionService:
         self.session_repo = AttendanceSessionRepository(db)
         self.class_repo = ClassRepository(db)
         self.user_repo = UserRepository(db)
+        self.student_repo = StudentRepository(db)
+        self.attendance_repo = AttendanceRepository(db)
 
     def get_session(self, session_id: int) -> AttendanceSession:
         session = self.session_repo.get(session_id)
@@ -87,3 +92,139 @@ class AttendanceSessionService:
 
     def get_open_sessions(self, skip: int = 0, limit: int = 100) -> List[AttendanceSession]:
         return self.session_repo.get_open_sessions(skip=skip, limit=limit)
+
+    def start_session(self, session_id: int) -> AttendanceSession:
+        """Start an attendance session and mark all students as expected."""
+        session = self.get_session(session_id)
+        
+        if session.status == SessionStatus.OPEN:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Session is already open"
+            )
+        
+        if session.status == SessionStatus.CLOSED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot restart a closed session"
+            )
+        
+        # Update session status to OPEN
+        update_data = {
+            "status": SessionStatus.OPEN,
+            "started_at": datetime.utcnow()
+        }
+        session = self.session_repo.update(session, update_data)
+        
+        return session
+
+    def close_session(self, session_id: int) -> Dict[str, Any]:
+        """Close an attendance session and mark remaining students as absent."""
+        session = self.get_session(session_id)
+        
+        if session.status != SessionStatus.OPEN:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot close session with status {session.status.value}"
+            )
+        
+        # Use transaction to ensure atomicity
+        try:
+            # Get all students in the class
+            students = self.student_repo.get_by_class(session.class_id)
+            student_ids = [s.id for s in students]
+            
+            # Get all attendance records for this session
+            attendance_records = self.attendance_repo.get_by_session(session_id)
+            present_student_ids = {r.student_id for r in attendance_records if r.status == AttendanceStatus.PRESENT}
+            
+            # Mark remaining students as absent
+            absent_count = 0
+            for student_id in student_ids:
+                if student_id not in present_student_ids:
+                    self.attendance_repo.create({
+                        "session_id": session_id,
+                        "student_id": student_id,
+                        "status": AttendanceStatus.ABSENT,
+                        "method": AttendanceMethod.MANUAL,  # Auto-marked as manual
+                        "recognized_at": datetime.utcnow()
+                    })
+                    absent_count += 1
+            
+            # Close the session
+            update_data = {
+                "status": SessionStatus.CLOSED,
+                "closed_at": datetime.utcnow()
+            }
+            session = self.session_repo.update(session, update_data)
+            
+            # Get final statistics
+            final_attendance = self.attendance_repo.get_by_session(session_id)
+            present_count = self.attendance_repo.get_present_count(session_id)
+            absent_count = self.attendance_repo.get_absent_count(session_id)
+            total_count = len(students)
+            attendance_percentage = (present_count / total_count * 100) if total_count > 0 else 0
+            
+            return {
+                "session": session,
+                "total_students": total_count,
+                "present_count": present_count,
+                "absent_count": absent_count,
+                "attendance_percentage": round(attendance_percentage, 2),
+                "auto_marked_absent": absent_count
+            }
+            
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to close session: {str(e)}"
+            )
+
+    def get_session_statistics(self, session_id: int) -> Dict[str, Any]:
+        """Get attendance statistics for a session."""
+        session = self.get_session(session_id)
+        
+        # Get all students in the class
+        students = self.student_repo.get_by_class(session.class_id)
+        total_count = len(students)
+        
+        # Get attendance records
+        present_count = self.attendance_repo.get_present_count(session_id)
+        absent_count = self.attendance_repo.get_absent_count(session_id)
+        attendance_percentage = (present_count / total_count * 100) if total_count > 0 else 0
+        remaining_count = total_count - present_count - absent_count
+        
+        return {
+            "session_id": session_id,
+            "status": session.status.value,
+            "total_students": total_count,
+            "present_count": present_count,
+            "absent_count": absent_count,
+            "remaining_count": remaining_count,
+            "attendance_percentage": round(attendance_percentage, 2),
+            "started_at": session.started_at.isoformat() if session.started_at else None,
+            "closed_at": session.closed_at.isoformat() if session.closed_at else None
+        }
+
+    def get_session_attendance(self, session_id: int) -> List[Dict[str, Any]]:
+        """Get all attendance records for a session with student details."""
+        session = self.get_session(session_id)
+        
+        attendance_records = self.attendance_repo.get_by_session(session_id)
+        result = []
+        
+        for record in attendance_records:
+            student = self.student_repo.get_by_id(record.student_id)
+            if student:
+                result.append({
+                    "attendance_id": record.id,
+                    "student_id": student.id,
+                    "student_name": f"{student.firstName} {student.lastName}",
+                    "student_id_str": student.studentId,
+                    "status": record.status.value,
+                    "method": record.method.value if record.method else None,
+                    "recognized_at": record.recognized_at.isoformat() if record.recognized_at else None
+                })
+        
+        return result
