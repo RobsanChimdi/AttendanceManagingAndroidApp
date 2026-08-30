@@ -19,6 +19,7 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   Student? _student;
+  Map<String, dynamic>? _faceEnrollmentStatus;
 
   @override
   void initState() {
@@ -34,8 +35,10 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
 
     try {
       final student = await _studentService.getStudent(widget.studentId);
+      final enrollmentStatus = await _studentService.getFaceEnrollmentStatus(widget.studentId);
       setState(() {
         _student = student;
+        _faceEnrollmentStatus = enrollmentStatus;
         _isLoading = false;
       });
     } catch (e) {
@@ -189,8 +192,11 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
                     'Face Enrollment',
                     Icons.face,
                     [
-                      _buildInfoRow('Status', 'Not Enrolled'),
-                      _buildInfoRow('Last Updated', 'Never'),
+                      _buildInfoRow('Status', _faceEnrollmentStatus?['enrolled'] == true ? 'Enrolled' : 'Not Enrolled'),
+                      if (_faceEnrollmentStatus?['enrolled'] == true)
+                        _buildInfoRow('Last Updated', _faceEnrollmentStatus?['enrollment_date']?.toString().split('T')[0] ?? 'Unknown'),
+                      if (_faceEnrollmentStatus?['enrolled'] == true)
+                        _buildInfoRow('Model', '${_faceEnrollmentStatus?['model_name'] ?? 'Unknown'} (${_faceEnrollmentStatus?['model_version'] ?? 'Unknown'})'),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -221,17 +227,37 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
                     mainAxisSpacing: 16,
                     crossAxisSpacing: 16,
                     children: [
-                      _buildActionButton (
+                      _buildActionButton(
                         'Enroll Face',
                         Icons.face,
                         Colors.blue,
-                        () => _showComingSoonDialog('Face Enrollment'),
+                        () {
+                          if (_student != null) {
+                            context.push(
+                              '/students/${widget.studentId}/face-enroll',
+                              extra: {
+                                'studentName': '${_student!.firstName} ${_student!.lastName}',
+                                'studentIdStr': _student!.studentId,
+                              },
+                            );
+                          }
+                        },
                       ),
                       _buildActionButton(
                         'Re-enroll Face',
                         Icons.refresh,
                         Colors.orange,
-                        () => _showComingSoonDialog('Face Re-enrollment'),
+                        () {
+                          if (_student != null) {
+                            context.push(
+                              '/students/${widget.studentId}/face-enroll',
+                              extra: {
+                                'studentName': '${_student!.firstName} ${_student!.lastName}',
+                                'studentIdStr': _student!.studentId,
+                              },
+                            );
+                          }
+                        },
                       ),
                       _buildActionButton(
                         'Generate QR',

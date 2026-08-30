@@ -26,3 +26,14 @@ class FaceEmbeddingRepository(BaseRepository[FaceEmbedding]):
         return self.db.query(FaceEmbedding).filter(
             FaceEmbedding.model_name == model_name
         ).offset(skip).limit(limit).all()
+
+    def delete_by_student_id(self, student_id: int) -> int:
+        """Delete all embeddings for a specific student (for re-enrollment)."""
+        count = self.db.query(FaceEmbedding).filter(
+            FaceEmbedding.student_id == student_id
+        ).count()
+        self.db.query(FaceEmbedding).filter(
+            FaceEmbedding.student_id == student_id
+        ).delete()
+        self.db.commit()
+        return count

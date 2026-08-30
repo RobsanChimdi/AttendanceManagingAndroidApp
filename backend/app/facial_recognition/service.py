@@ -117,6 +117,7 @@ class FaceRecognitionService:
         Returns:
             - bool: True if face is detected, False otherwise
             - face_coords: the raw face coordinates or bounding box from YuNet
+            - int: number of faces detected
         """
         if not self.verify_models_loaded() or cv2 is None:
             raise RuntimeError("Facial recognition models are not loaded or cv2 is missing.")
@@ -126,7 +127,7 @@ class FaceRecognitionService:
             nparr = np.frombuffer(image_bytes, np.uint8)
             img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
             if img is None:
-                return False, None
+                return False, None, 0
 
             h, w, _ = img.shape
             self.detector.setInputSize((w, h))
@@ -134,13 +135,59 @@ class FaceRecognitionService:
             _, faces = self.detector.detect(img)
             
             if faces is not None and len(faces) > 0:
-                # Return True and the first detected face coordinates
-                return True, faces[0]
+                # Return True, the first detected face coordinates, and number of faces
+                return True, faces[0], len(faces)
             
-            return False, None
+            return False, None, 0
         except Exception as e:
             logger.error(f"Error in face detection: {e}")
-            return False, None
+            return False, None, 0
+
+    def validate_face_quality(self, image_bytes: bytes, face_coords) -> dict:
+        """
+        Validates the quality of a detected face.
+        Returns:
+            - dict: {valid: bool, message: str, face_size: tuple}
+        """
+        if not self.verify_models_loaded() or cv2 is None:
+            return {"valid": False, "message": "Models not loaded", "face_size": (0, 0)}
+
+        try:
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                return {"valid": False, "message": "Failed to decode image", "face_size": (0, 0)}
+
+            h, w = img.shape[:2]
+            
+            # Extract face bounding box
+            x, y, width, height = face_coords[:4].astype(int)
+            
+            # Check face size (should be at least 100x100 pixels)
+            if width < 100 or height < 100:
+                return {"valid": False, "message": "Face too small", "face_size": (width, height)}
+            
+            # Check face size relative to image (should be at least 20% of image)
+            face_area = width * height
+            image_area = w * h
+            if face_area < image_area * 0.2:
+                return {"valid": False, "message": "Face too small relative to image", "face_size": (width, height)}
+            
+            # Check face position (should be reasonably centered)
+            face_center_x = x + width / 2
+            face_center_y = y + height / 2
+            image_center_x = w / 2
+            image_center_y = h / 2
+            
+            # Allow face to be within 50% of center
+            if abs(face_center_x - image_center_x) > w * 0.25 or abs(face_center_y - image_center_y) > h * 0.25:
+                return {"valid": False, "message": "Face not centered enough", "face_size": (width, height)}
+            
+            return {"valid": True, "message": "Face quality acceptable", "face_size": (width, height)}
+            
+        except Exception as e:
+            logger.error(f"Error validating face quality: {e}")
+            return {"valid": False, "message": f"Validation error: {e}", "face_size": (0, 0)}
 
     def extract_embedding(self, image_bytes: bytes, face_coords) -> np.ndarray:
         """

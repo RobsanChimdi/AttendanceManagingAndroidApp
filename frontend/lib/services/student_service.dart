@@ -136,4 +136,52 @@ class StudentService {
       throw Exception('Failed to delete student: $e');
     }
   }
+
+  Future<Map<String, dynamic>> enrollFace(int studentId, List<File> imageFiles) async {
+    try {
+      final formData = FormData();
+      
+      for (int i = 0; i < imageFiles.length; i++) {
+        final file = await MultipartFile.fromFile(
+          imageFiles[i].path,
+          filename: 'sample_$i.jpg',
+        );
+        formData.files.add(MapEntry('files', file));
+      }
+
+      final response = await _dio.post(
+        '/students/$studentId/face/enroll',
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+        ),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        throw Exception('Student not found');
+      }
+      if (e.response?.statusCode == 400) {
+        throw Exception(e.response?.data['detail'] ?? 'Invalid enrollment data');
+      }
+      throw Exception('Failed to enroll face: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to enroll face: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getFaceEnrollmentStatus(int studentId) async {
+    try {
+      final response = await _dio.get('/students/$studentId/face/status');
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        throw Exception('Student not found');
+      }
+      throw Exception('Failed to get enrollment status: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to get enrollment status: $e');
+    }
+  }
 }

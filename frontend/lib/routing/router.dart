@@ -11,6 +11,7 @@ import '../features/students/students_screen.dart';
 import '../features/students/add_student_screen.dart';
 import '../features/students/edit_student_screen.dart';
 import '../features/students/student_details_screen.dart';
+import '../features/students/face_enrollment_screen.dart';
 
 // Import providers
 import '../providers/auth_provider.dart';
@@ -108,6 +109,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final studentId = int.parse(state.pathParameters['studentId']!);
           return EditStudentScreen(studentId: studentId);
+        },
+      ),
+      GoRoute(
+        path: '/students/:studentId/face-enroll',
+        name: 'face-enrollment',
+        builder: (context, state) {
+          final studentId = int.parse(state.pathParameters['studentId']!);
+          final extra = state.extra as Map<String, dynamic>?;
+          return FaceEnrollmentScreen(
+            studentId: studentId,
+            studentName: extra?['studentName'] ?? 'Student',
+            studentIdStr: extra?['studentIdStr'] ?? 'ID',
+          );
         },
       ),
     ],
