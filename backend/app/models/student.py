@@ -25,7 +25,10 @@ class Student(Base, TimestampMixin):
     guardian_name = Column(String, nullable=True)
     guardian_phone = Column(String, nullable=True)
     guardian_email = Column(String, nullable=True)
+    qr_token = Column(String, unique=True, nullable=True)  # Secure token for二维码 attendance
     status = Column(SQLEnum(StudentStatus), default=StudentStatus.ACTIVE)
+    critical_attendance = Column(String, nullable=True)  # Stores attendance percentage as string
+    is_critical = Column(String, nullable=True)  # Flag for critical attendance (true/false as string)
     
     # Relationships
     class_relationship = relationship("Class", back_populates="students")

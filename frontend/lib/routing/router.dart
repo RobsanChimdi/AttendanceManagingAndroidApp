@@ -12,8 +12,12 @@ import '../features/students/add_student_screen.dart';
 import '../features/students/edit_student_screen.dart';
 import '../features/students/student_details_screen.dart';
 import '../features/students/face_enrollment_screen.dart';
+import '../features/students/student_qr_screen.dart';
+import '../features/students/critical_attendance_screen.dart';
 import '../features/attendance/attendance_scanner_screen.dart';
 import '../features/attendance/start_attendance_screen.dart';
+import '../features/attendance/qr_scanner_screen.dart';
+import '../features/analytics/analytics_screen.dart';
 
 // Import providers
 import '../providers/auth_provider.dart';
@@ -127,6 +131,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/students/:studentId/qr',
+        name: 'student-qr',
+        builder: (context, state) {
+          final studentId = int.parse(state.pathParameters['studentId']!);
+          final extra = state.extra as Map<String, dynamic>?;
+          return StudentQRScreen(
+            studentId: studentId,
+            studentName: extra?['studentName'] ?? 'Student',
+          );
+        },
+      ),
+      GoRoute(
         path: '/attendance/scanner/:sessionId',
         name: 'attendance-scanner',
         builder: (context, state) {
@@ -135,10 +151,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/attendance/qr-scanner/:sessionId',
+        name: 'qr-scanner',
+        builder: (context, state) {
+          final sessionId = int.parse(state.pathParameters['sessionId']!);
+          return QRScannerScreen(sessionId: sessionId);
+        },
+      ),
+      GoRoute(
         path: '/attendance/start',
         name: 'start-attendance',
         builder: (context, state) {
           return const StartAttendanceScreen();
+        },
+      ),
+      GoRoute(
+        path: '/students/critical-attendance',
+        name: 'critical-attendance',
+        builder: (context, state) {
+          return const CriticalAttendanceScreen();
+        },
+      ),
+      GoRoute(
+        path: '/analytics',
+        name: 'analytics',
+        builder: (context, state) {
+          return const AnalyticsScreen();
         },
       ),
     ],

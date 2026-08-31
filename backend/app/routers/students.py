@@ -5,6 +5,8 @@ from app.database import get_db
 from app.services.student_service import StudentService
 from app.schemas.student import StudentCreate, StudentUpdate, StudentResponse, StudentStatus
 from pydantic import BaseModel
+import secrets
+import string
 
 router = APIRouter(prefix="/students", tags=["Students"])
 
@@ -284,4 +286,181 @@ async def get_face_enrollment_status(student_id: int, db: Session = Depends(get_
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to check enrollment status: {e}"
+        )
+
+@router.post("/{student_id}/qr-token")
+async def generate_qr_token(student_id: int, db: Session = Depends(get_db)):
+    """
+    Generate or regenerate a secure QR token for a student.
+    The token is a random secure string used for QR-based attendance.
+    """
+    try:
+        from app.repositories.student_repository import StudentRepository
+        
+        student_repo = StudentRepository(db)
+        student = student_repo.get_by_id(student_id)
+        
+        if not student:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Student not found"
+            )
+        
+        # Generate secure random token (32 characters)
+        alphabet = string.ascii_letters + string.digits
+        qr_token = ''.join(secrets.choice(alphabet) for _ in range(32))
+        
+        # Update student with new token
+        student_repo.update(student, {"qr_token": qr_token})
+        
+        return {
+            "student_id": student_id,
+            "student_name": f"{student.firstName} {student.lastName}",
+            "qr_token": qr_token
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate QR token: {e}"
+        )
+
+@router.get("/{student_id}/qr-token")
+async def get_qr_token(student_id: int, db: Session = Depends(get_db)):
+    """
+    Get the current QR token for a student.
+    """
+    try:
+        from app.repositories.student_repository import StudentRepository
+        
+        student_repo = StudentRepository(db)
+        student = student_repo.get_by_id(student_id)
+        
+        if not student:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Student not found"
+            )
+        
+        if not student.qr_token:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="QR token not generated for this student"
+            )
+        
+        return {
+            "student_id": student_id,
+            "student_name": f"{student.firstName} {student.lastName}",
+            "qr_token": student.qr_token
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get QR token: {e}"
+        )
+
+@router.get("/{student_id}/attendance-summary")
+async def get_attendance_summary(student_id: int, db: Session = Depends(get_db)):
+    """
+    Get attendance summary for a student including percentage and critical status.
+    """
+    try:
+        from app.repositories.student_repository import StudentRepository
+        from app.repositories.notification_repository import NotificationRepository
+        
+        student_repo = StudentRepository(db)
+        notification_repo = NotificationRepository(db)
+        
+        student = student_repo.get_by_id(student_id)
+        
+        if not student:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Student not found"
+            )
+        
+        # Calculate attendance percentage
+        attendance_percentage = student_repo.calculate_attendance_percentage(student_id)
+        
+        # Get latest notification
+        notifications = notification_repo.get_by_student(student_id, limit=1)
+        latest_notification = notifications[0] if notifications else None
+        
+        return {
+            "student_id": student_id,
+            "student_name": f"{student.firstName} {student.lastName}",
+            "student_id_str": student.studentId,
+            "attendance_percentage": attendance_percentage,
+            "is_critical": attendance_percentage < 50.0,
+            "required_percentage": 50.0,
+            "guardian_name": student.guardian_name,
+            "guardian_phone": student.guardian_phone,
+            "latest_notification": {
+                "id": latest_notification.id,
+                "status": latest_notification.status.value,
+                "message": latest_notification.message,
+                "created_at": latest_notification.created_at.isoformat() if latest_notification else None
+            } if latest_notification else None
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get attendance summary: {e}"
+        )
+
+@router.get("/critical-attendance")
+async def get_critical_attendance_students(
+    threshold: float = 50.0,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all students with attendance percentage below the threshold.
+    """
+    try:
+        from app.repositories.student_repository import StudentRepository
+        from app.repositories.notification_repository import NotificationRepository
+        
+        student_repo = StudentRepository(db)
+        notification_repo = NotificationRepository(db)
+        
+        students = student_repo.get_critical_attendance_students(threshold)
+        result = []
+        
+        for student in students[skip:skip + limit]:
+            attendance_percentage = student_repo.calculate_attendance_percentage(student.id)
+            notifications = notification_repo.get_by_student(student.id, limit=1)
+            latest_notification = notifications[0] if notifications else None
+            
+            result.append({
+                "student_id": student.id,
+                "student_name": f"{student.firstName} {student.lastName}",
+                "student_id_str": student.studentId,
+                "grade": student.grade,
+                "section": student.section,
+                "attendance_percentage": attendance_percentage,
+                "required_percentage": threshold,
+                "guardian_name": student.guardian_name,
+                "guardian_phone": student.guardian_phone,
+                "latest_notification_status": latest_notification.status.value if latest_notification else None
+            })
+        
+        return {
+            "students": result,
+            "total": len(students),
+            "skip": skip,
+            "limit": limit
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get critical attendance students: {e}"
         )

@@ -263,7 +263,16 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
                         'Generate QR',
                         Icons.qr_code,
                         Colors.green,
-                        () => _showComingSoonDialog('QR Generation'),
+                        () {
+                          if (_student != null) {
+                            context.push(
+                              '/students/${widget.studentId}/qr',
+                              extra: {
+                                'studentName': '${_student!.firstName} ${_student!.lastName}',
+                              },
+                            );
+                          }
+                        },
                       ),
                       _buildActionButton(
                         'View Attendance',

@@ -24,6 +24,9 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
   final AttendanceService _attendanceService = AttendanceService();
   final AttendanceSessionService _sessionService = AttendanceSessionService();
   
+  // Scan mode: 'face' or 'qr'
+  String _scanMode = 'face';
+  
   CameraController? _cameraController;
   List<CameraDescription>? _cameras;
   bool _isCameraInitialized = false;
@@ -289,12 +292,47 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
             tooltip: 'Close Session',
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 'face',
+                        label: Text('Face'),
+                        icon: Icon(Icons.face),
+                      ),
+                      ButtonSegment(
+                        value: 'qr',
+                        label: Text('QR'),
+                        icon: Icon(Icons.qr_code),
+                      ),
+                    ],
+                    selected: {_scanMode},
+                    onSelectionChanged: (Set<String> newSelection) {
+                      setState(() {
+                        _scanMode = newSelection.first;
+                        _resetRecognition();
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _errorMessage != null && _recognitionStatus == null
-              ? _buildErrorView()
-              : _buildScannerView(),
+          : _scanMode == 'qr'
+              ? _buildQRScannerPlaceholder()
+              : _errorMessage != null && _recognitionStatus == null
+                  ? _buildErrorView()
+                  : _buildScannerView(),
     );
   }
 
@@ -324,6 +362,115 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildQRScannerPlaceholder() {
+    return Column(
+      children: [
+        if (_sessionStats != null)
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            color: Colors.blue.shade50,
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatCard('Expected', _sessionStats!['total_students'].toString(), Icons.people),
+                    _buildStatCard('Present', _sessionStats!['present_count'].toString(), Icons.check_circle, Colors.green),
+                    _buildStatCard('Absent', _sessionStats!['absent_count'].toString(), Icons.cancel, Colors.red),
+                    _buildStatCard('Remaining', _sessionStats!['remaining_count'].toString(), Icons.hourglass_empty, Colors.orange),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                LinearProgressIndicator(
+                  value: _sessionStats!['attendance_percentage'] / 100,
+                  backgroundColor: Colors.grey.shade300,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    _sessionStats!['attendance_percentage'] >= 75 ? Colors.green :
+                    _sessionStats!['attendance_percentage'] >= 50 ? Colors.orange : Colors.red,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Attendance: ${_sessionStats!['attendance_percentage'].toStringAsFixed(1)}%',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+        
+        Expanded(
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.qr_code_scanner, size: 100, color: Colors.grey),
+                const SizedBox(height: 16),
+                const Text(
+                  'QR Scanner',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Tap below to open QR scanner',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    context.push('/attendance/qr-scanner/${widget.sessionId}');
+                  },
+                  icon: const Icon(Icons.qr_code),
+                  label: const Text('Open QR Scanner'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        
+        if (_recentRecognitions != null && _recentRecognitions!.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            height: 150,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Recent Recognitions',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _recentRecognitions!.length,
+                    itemBuilder: (context, index) {
+                      final record = _recentRecognitions![index];
+                      return ListTile(
+                        dense: true,
+                        leading: Icon(
+                          record['status'] == 'PRESENT' ? Icons.check_circle : Icons.cancel,
+                          color: record['status'] == 'PRESENT' ? Colors.green : Colors.red,
+                          size: 20,
+                        ),
+                        title: Text(record['student_name']),
+                        subtitle: Text(record['student_id_str']),
+                        trailing: Text(
+                          record['recognized_at']?.toString().split('T')[1].split('.')[0] ?? '',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -514,10 +661,10 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         ),
         child: Stack(
           children: [
-            Positioned(top: 10, left: 10, child: _buildCornerMarker(TopLeft)),
-            Positioned(top: 10, right: 10, child: _buildCornerMarker(TopRight)),
-            Positioned(bottom: 10, left: 10, child: _buildCornerMarker(BottomLeft)),
-            Positioned(bottom: 10, right: 10, child: _buildCornerMarker(BottomRight)),
+            Positioned(top: 10, left: 10, child: _buildCornerMarker()),
+            Positioned(top: 10, right: 10, child: _buildCornerMarker()),
+            Positioned(bottom: 10, left: 10, child: _buildCornerMarker()),
+            Positioned(bottom: 10, right: 10, child: _buildCornerMarker()),
             const Center(
               child: Icon(Icons.face, size: 80, color: Colors.white54),
             ),
@@ -527,7 +674,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
     );
   }
 
-  Widget _buildCornerMarker(Alignment alignment) {
+  Widget _buildCornerMarker() {
     return Container(
       width: 20,
       height: 20,

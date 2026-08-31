@@ -1,7 +1,9 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy import and_, or_, func
 from app.models.student import Student, StudentStatus
+from app.models.attendance import Attendance, AttendanceStatus
+from app.models.attendance_session import SessionStatus
 from app.repositories.base_repository import BaseRepository
 
 class StudentRepository(BaseRepository[Student]):
@@ -11,11 +13,17 @@ class StudentRepository(BaseRepository[Student]):
     def get_by_student_id(self, student_id: str) -> Optional[Student]:
         return self.db.query(Student).filter(Student.student_id == student_id).first()
 
+    def get_by_qr_token(self, qr_token: str) -> Optional[Student]:
+        return self.db.query(Student).filter(Student.qr_token == qr_token).first()
+
     def get_by_class(self, class_id: int, skip: int = 0, limit: int = 100) -> List[Student]:
         return self.db.query(Student).filter(Student.class_id == class_id).offset(skip).limit(limit).all()
 
     def get_active_students(self, skip: int = 0, limit: int = 100) -> List[Student]:
         return self.db.query(Student).filter(Student.status == StudentStatus.ACTIVE).offset(skip).limit(limit).all()
+
+    def get_active_students_count(self) -> int:
+        return self.db.query(Student).filter(Student.status == StudentStatus.ACTIVE).count()
 
     def search_by_name(self, name: str, skip: int = 0, limit: int = 100) -> List[Student]:
         return self.db.query(Student).filter(
@@ -103,3 +111,51 @@ class StudentRepository(BaseRepository[Student]):
             )
         
         return query.count()
+
+    def calculate_attendance_percentage(self, student_id: int) -> float:
+        """
+        Calculate attendance percentage for a student.
+        Formula: present sessions / applicable attendance sessions * 100
+        Applicable sessions = CLOSED sessions for the student's class
+        """
+        # Get the student's class
+        student = self.get_by_id(student_id)
+        if not student or not student.class_id:
+            return 0.0
+        
+        # Get all CLOSED sessions for the student's class
+        from app.models.attendance_session import AttendanceSession
+        applicable_sessions = self.db.query(AttendanceSession).filter(
+            AttendanceSession.class_id == student.class_id,
+            AttendanceSession.status == SessionStatus.CLOSED
+        ).all()
+        
+        if not applicable_sessions:
+            return 0.0
+        
+        applicable_session_ids = [s.id for s in applicable_sessions]
+        
+        # Count present attendance records for these sessions
+        present_count = self.db.query(Attendance).filter(
+            Attendance.student_id == student_id,
+            Attendance.session_id.in_(applicable_session_ids),
+            Attendance.status == AttendanceStatus.PRESENT
+        ).count()
+        
+        # Calculate percentage
+        percentage = (present_count / len(applicable_sessions)) * 100
+        return round(percentage, 2)
+
+    def get_critical_attendance_students(self, threshold: float = 50.0) -> List[Student]:
+        """
+        Get students with attendance percentage below the threshold.
+        """
+        students = self.get_active_students()
+        critical_students = []
+        
+        for student in students:
+            attendance_pct = self.calculate_attendance_percentage(student.id)
+            if attendance_pct < threshold:
+                critical_students.append(student)
+        
+        return critical_students

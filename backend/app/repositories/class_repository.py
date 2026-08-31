@@ -15,3 +15,9 @@ class ClassRepository(BaseRepository[Class]):
 
     def get_by_grade(self, grade: str, skip: int = 0, limit: int = 100) -> List[Class]:
         return self.db.query(Class).filter(Class.grade == grade).offset(skip).limit(limit).all()
+
+    def get_by_teacher(self, teacher_id: int, skip: int = 0, limit: int = 100) -> List[Class]:
+        return self.db.query(Class).filter(Class.teacher_id == teacher_id).offset(skip).limit(limit).all()
+
+    def get_all_count(self) -> int:
+        return self.db.query(Class).count()

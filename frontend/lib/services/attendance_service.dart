@@ -35,4 +35,24 @@ class AttendanceService {
       throw Exception('Failed to recognize face: $e');
     }
   }
+
+  Future<Map<String, dynamic>> markQRAttendance(int sessionId, String qrToken) async {
+    try {
+      final response = await _dio.post(
+        '/attendance/sessions/$sessionId/qr-attendance',
+        data: {'qr_token': qrToken},
+      );
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        throw Exception('Attendance session not found');
+      }
+      if (e.response?.statusCode == 400) {
+        throw Exception(e.response?.data['detail'] ?? 'Invalid request');
+      }
+      throw Exception('Failed to mark QR attendance: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to mark QR attendance: $e');
+    }
+  }
 }

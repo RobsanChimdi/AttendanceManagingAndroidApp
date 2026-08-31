@@ -7,9 +7,12 @@ from app.repositories.class_repository import ClassRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.student_repository import StudentRepository
 from app.repositories.attendance_repository import AttendanceRepository
+from app.repositories.notification_repository import NotificationRepository
 from app.schemas.attendance_session import AttendanceSessionCreate, AttendanceSessionUpdate
 from app.models.attendance_session import AttendanceSession, SessionStatus
 from app.models.attendance import AttendanceStatus, AttendanceMethod
+from app.models.notification import NotificationStatus
+from app.services.sms_provider import NoOpSMSProvider
 
 class AttendanceSessionService:
     def __init__(self, db: Session):
@@ -19,6 +22,9 @@ class AttendanceSessionService:
         self.user_repo = UserRepository(db)
         self.student_repo = StudentRepository(db)
         self.attendance_repo = AttendanceRepository(db)
+        self.notification_repo = NotificationRepository(db)
+        self.sms_provider = NoOpSMSProvider()
+        self.attendance_threshold = 50.0
 
     def get_session(self, session_id: int) -> AttendanceSession:
         session = self.session_repo.get(session_id)
@@ -119,7 +125,7 @@ class AttendanceSessionService:
         return session
 
     def close_session(self, session_id: int) -> Dict[str, Any]:
-        """Close an attendance session and mark remaining students as absent."""
+        """Close an attendance session, mark absences, recalculate attendance, and create critical alerts."""
         session = self.get_session(session_id)
         
         if session.status != SessionStatus.OPEN:
@@ -165,13 +171,55 @@ class AttendanceSessionService:
             total_count = len(students)
             attendance_percentage = (present_count / total_count * 100) if total_count > 0 else 0
             
+            # Recalculate attendance for all students and check for critical attendance
+            critical_students = []
+            for student in students:
+                # Calculate attendance percentage
+                attendance_pct = self.student_repo.calculate_attendance_percentage(student.id)
+                
+                # Update student's attendance fields
+                self.student_repo.update(student, {
+                    "critical_attendance": str(attendance_pct),
+                    "is_critical": "true" if attendance_pct < self.attendance_threshold else "false"
+                })
+                
+                # Check if critical and create notification
+                if attendance_pct < self.attendance_threshold:
+                    critical_students.append({
+                        "student": student,
+                        "attendance_pct": attendance_pct
+                    })
+                    
+                    # Check if notification already exists for this student
+                    existing_notifications = self.notification_repo.get_by_student(student.id)
+                    # Only create notification if no recent notification exists (within last 7 days)
+                    recent_notification = None
+                    for notif in existing_notifications:
+                        if notif.status == NotificationStatus.PENDING:
+                            recent_notification = notif
+                            break
+                    
+                    if not recent_notification:
+                        # Create notification
+                        message = f"Your child {student.firstName} {student.lastName} currently has an attendance rate of {attendance_pct}%, which is below the required {self.attendance_threshold}% threshold. Please contact the school for more information."
+                        
+                        notification_data = {
+                            "student_id": student.id,
+                            "guardian_name": student.guardian_name or "Parent",
+                            "guardian_phone": student.guardian_phone or "",
+                            "message": message,
+                            "status": NotificationStatus.PENDING
+                        }
+                        self.notification_repo.create(notification_data)
+            
             return {
                 "session": session,
                 "total_students": total_count,
                 "present_count": present_count,
                 "absent_count": absent_count,
                 "attendance_percentage": round(attendance_percentage, 2),
-                "auto_marked_absent": absent_count
+                "auto_marked_absent": absent_count,
+                "critical_students_count": len(critical_students)
             }
             
         except Exception as e:

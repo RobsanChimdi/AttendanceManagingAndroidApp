@@ -11,6 +11,7 @@ from app.models.attendance import AttendanceStatus, AttendanceMethod
 from app.services.attendance_session_service import AttendanceSessionService
 from app.schemas.attendance_session import AttendanceSessionCreate, AttendanceSessionResponse
 from app.config import settings
+from pydantic import BaseModel
 import pickle
 import numpy as np
 import logging
@@ -18,6 +19,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
+
+class QRAttendanceRequest(BaseModel):
+    qr_token: str
 
 # Session Management Endpoints
 
@@ -303,4 +307,89 @@ async def recognize_face(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Face recognition failed: {str(e)}"
+        )
+
+# QR Attendance Endpoint
+
+@router.post("/sessions/{session_id}/qr-attendance")
+async def mark_qr_attendance(
+    session_id: int,
+    qr_request: QRAttendanceRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Mark attendance using QR code token.
+    Validates the token, checks session status, prevents duplicates.
+    """
+    try:
+        # Validate session exists and is OPEN
+        session_repo = AttendanceSessionRepository(db)
+        session = session_repo.get_by_id(session_id)
+        
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Attendance session not found"
+            )
+        
+        if session.status != SessionStatus.OPEN:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Attendance session is {session.status.value}. Cannot mark attendance in closed sessions."
+            )
+        
+        # Find student by QR token
+        student_repo = StudentRepository(db)
+        student = student_repo.get_by_qr_token(qr_request.qr_token)
+        
+        if not student:
+            return {
+                "status": "INVALID",
+                "reason": "Invalid QR code"
+            }
+        
+        # Check if student belongs to the session's class
+        if student.class_id != session.class_id:
+            return {
+                "status": "INVALID",
+                "reason": "Student does not belong to this class"
+            }
+        
+        # Check for duplicate attendance
+        attendance_repo = AttendanceRepository(db)
+        existing_attendance = attendance_repo.get_by_session_and_student(session_id, student.id)
+        
+        if existing_attendance and existing_attendance.status == AttendanceStatus.PRESENT:
+            return {
+                "status": "ALREADY_PRESENT",
+                "student_id": student.id,
+                "student_name": f"{student.firstName} {student.lastName}",
+                "student_id_str": student.studentId,
+                "message": "Student already marked present"
+            }
+        
+        # Mark attendance
+        attendance_repo.create({
+            "session_id": session_id,
+            "student_id": student.id,
+            "status": AttendanceStatus.PRESENT,
+            "method": AttendanceMethod.QR,
+            "recognized_at": None  # Will be set by timestamp mixin
+        })
+        
+        return {
+            "status": "MATCH",
+            "student_id": student.id,
+            "student_name": f"{student.firstName} {student.lastName}",
+            "student_id_str": student.studentId,
+            "message": "Attendance marked successfully"
+        }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in QR attendance: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"QR attendance failed: {str(e)}"
         )

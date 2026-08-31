@@ -12,3 +12,6 @@ class UserRepository(BaseRepository[User]):
 
     def get_by_role(self, role: UserRole, skip: int = 0, limit: int = 100) -> List[User]:
         return self.db.query(User).filter(User.role == role).offset(skip).limit(limit).all()
+
+    def get_teachers_count(self) -> int:
+        return self.db.query(User).filter(User.role == UserRole.teacher).count()

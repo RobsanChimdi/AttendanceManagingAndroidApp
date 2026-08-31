@@ -184,4 +184,68 @@ class StudentService {
       throw Exception('Failed to get enrollment status: $e');
     }
   }
+
+  Future<Map<String, dynamic>> generateQrToken(int studentId) async {
+    try {
+      final response = await _dio.post('/students/$studentId/qr-token');
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        throw Exception('Student not found');
+      }
+      throw Exception('Failed to generate QR token: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to generate QR token: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getQrToken(int studentId) async {
+    try {
+      final response = await _dio.get('/students/$studentId/qr-token');
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        throw Exception('QR token not found for this student');
+      }
+      throw Exception('Failed to get QR token: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to get QR token: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getAttendanceSummary(int studentId) async {
+    try {
+      final response = await _dio.get('/students/$studentId/attendance-summary');
+      return response.data;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        throw Exception('Student not found');
+      }
+      throw Exception('Failed to get attendance summary: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to get attendance summary: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getCriticalAttendanceStudents({
+    double threshold = 50.0,
+    int skip = 0,
+    int limit = 100,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/students/critical-attendance',
+        queryParameters: {
+          'threshold': threshold,
+          'skip': skip,
+          'limit': limit,
+        },
+      );
+      return response.data;
+    } on DioException catch (e) {
+      throw Exception('Failed to get critical attendance students: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to get critical attendance students: $e');
+    }
+  }
 }
