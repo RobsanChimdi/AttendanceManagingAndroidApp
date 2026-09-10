@@ -276,12 +276,11 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
                         child: Text(gender),
                       )),
                 ],
-                onChanged: (value) {
+                onChanged: _isSaving ? null : (value) {
                   setState(() {
                     _selectedGender = value;
                   });
                 },
-                enabled: !_isSaving,
               ),
               const SizedBox(height: 16),
               
@@ -322,12 +321,11 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
                         child: Text(grade),
                       )),
                 ],
-                onChanged: (value) {
+                onChanged: _isSaving ? null : (value) {
                   setState(() {
                     _selectedGrade = value;
                   });
                 },
-                enabled: !_isSaving,
               ),
               const SizedBox(height: 16),
               
@@ -344,12 +342,11 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
                         child: Text(section),
                       )),
                 ],
-                onChanged: (value) {
+                onChanged: _isSaving ? null : (value) {
                   setState(() {
                     _selectedSection = value;
                   });
                 },
-                enabled: !_isSaving,
               ),
               const SizedBox(height: 16),
               
@@ -447,12 +444,11 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
                       value: status,
                       child: Text(status.name),
                     )).toList(),
-                onChanged: (value) {
+                onChanged: _isSaving ? null : (value) {
                   setState(() {
                     _selectedStatus = value!;
                   });
                 },
-                enabled: !_isSaving,
               ),
               const SizedBox(height: 24),
               

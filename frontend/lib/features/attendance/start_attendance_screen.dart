@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/class_service.dart';
 import '../../services/attendance_session_service.dart';
 
@@ -82,9 +83,11 @@ class _StartAttendanceScreenState extends ConsumerState<StartAttendanceScreen> {
 
     try {
       // Create session
+      final currentUser = ref.read(currentUserProvider);
+      final teacherId = currentUser?.id ?? 1;
       final session = await _sessionService.createSession({
         'class_id': _selectedClassId,
-        'teacher_id': 1, // TODO: Get from auth state
+        'teacher_id': teacherId,
         'date': _selectedDate!.toIso8601String().split('T')[0],
         'status': 'OPEN',
       });
@@ -141,7 +144,7 @@ class _StartAttendanceScreenState extends ConsumerState<StartAttendanceScreen> {
                               child: Text('${cls['name']} - ${cls['grade']} ${cls['section']}'),
                             )),
                       ],
-                      onChanged: (value) {
+                      onChanged: _isCreating ? null : (value) {
                         setState(() {
                           _selectedClassId = value;
                         });
@@ -152,7 +155,6 @@ class _StartAttendanceScreenState extends ConsumerState<StartAttendanceScreen> {
                         }
                         return null;
                       },
-                      enabled: !_isCreating,
                     ),
                     const SizedBox(height: 24),
                     

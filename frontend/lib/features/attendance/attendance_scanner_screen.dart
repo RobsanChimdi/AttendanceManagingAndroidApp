@@ -5,6 +5,12 @@ import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'dart:async';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_text_styles.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_button.dart';
+import '../../widgets/app_loading.dart';
 import '../../services/attendance_service.dart';
 import '../../services/attendance_session_service.dart';
 
@@ -278,24 +284,29 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Live Attendance Scanner'),
+        backgroundColor: AppColors.surface,
+        elevation: AppSpacing.elevationSm,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _resetRecognition,
             tooltip: 'Reset',
+            color: AppColors.textSecondary,
           ),
           IconButton(
             icon: const Icon(Icons.close),
             onPressed: _showCloseConfirmation,
             tooltip: 'Close Session',
+            color: AppColors.error,
           ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
             child: Row(
               children: [
                 Expanded(
@@ -319,6 +330,20 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
                         _resetRecognition();
                       });
                     },
+                    style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return AppColors.primary.withOpacity(0.1);
+                        }
+                        return AppColors.surfaceVariant;
+                      }),
+                      foregroundColor: MaterialStateProperty.resolveWith((states) {
+                        if (states.contains(MaterialState.selected)) {
+                          return AppColors.primary;
+                        }
+                        return AppColors.textSecondary;
+                      }),
+                    ),
                   ),
                 ),
               ],
@@ -327,7 +352,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppLoading(message: 'Initializing camera...')
           : _scanMode == 'qr'
               ? _buildQRScannerPlaceholder()
               : _errorMessage != null && _recognitionStatus == null
@@ -339,25 +364,26 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
   Widget _buildErrorView() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
+            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
+              style: AppTextStyles.bodyMedium,
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
+            const SizedBox(height: AppSpacing.xl),
+            AppButton(
+              text: _errorMessage?.contains('permission') == true
+                  ? 'Open Settings'
+                  : 'Retry',
               onPressed: _errorMessage?.contains('permission') == true
                   ? openAppSettings
                   : _initializeCamera,
-              child: Text(_errorMessage?.contains('permission') == true
-                  ? 'Open Settings'
-                  : 'Retry'),
+              type: ButtonType.primary,
             ),
           ],
         ),
@@ -369,33 +395,36 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
     return Column(
       children: [
         if (_sessionStats != null)
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            color: Colors.blue.shade50,
+          AppCard(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            backgroundColor: AppColors.primary.withOpacity(0.05),
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildStatCard('Expected', _sessionStats!['total_students'].toString(), Icons.people),
-                    _buildStatCard('Present', _sessionStats!['present_count'].toString(), Icons.check_circle, Colors.green),
-                    _buildStatCard('Absent', _sessionStats!['absent_count'].toString(), Icons.cancel, Colors.red),
-                    _buildStatCard('Remaining', _sessionStats!['remaining_count'].toString(), Icons.hourglass_empty, Colors.orange),
+                    _buildStatCard('Expected', _sessionStats!['total_students'].toString(), Icons.people, AppColors.primary),
+                    _buildStatCard('Present', _sessionStats!['present_count'].toString(), Icons.check_circle, AppColors.success),
+                    _buildStatCard('Absent', _sessionStats!['absent_count'].toString(), Icons.cancel, AppColors.error),
+                    _buildStatCard('Remaining', _sessionStats!['remaining_count'].toString(), Icons.hourglass_empty, AppColors.warning),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 LinearProgressIndicator(
                   value: _sessionStats!['attendance_percentage'] / 100,
-                  backgroundColor: Colors.grey.shade300,
+                  backgroundColor: AppColors.border,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    _sessionStats!['attendance_percentage'] >= 75 ? Colors.green :
-                    _sessionStats!['attendance_percentage'] >= 50 ? Colors.orange : Colors.red,
+                    _sessionStats!['attendance_percentage'] >= 75 ? AppColors.success :
+                    _sessionStats!['attendance_percentage'] >= 50 ? AppColors.warning : AppColors.error,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   'Attendance: ${_sessionStats!['attendance_percentage'].toStringAsFixed(1)}%',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -406,27 +435,29 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.qr_code_scanner, size: 100, color: Colors.grey),
-                const SizedBox(height: 16),
-                const Text(
+                Icon(Icons.qr_code_scanner, size: 100, color: AppColors.textHint),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
                   'QR Scanner',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.headlineSmall.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-                const SizedBox(height: 8),
-                const Text(
+                const SizedBox(height: AppSpacing.sm),
+                Text(
                   'Tap below to open QR scanner',
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-                const SizedBox(height: 24),
-                ElevatedButton.icon(
+                const SizedBox(height: AppSpacing.xl),
+                AppButton(
+                  text: 'Open QR Scanner',
+                  icon: Icons.qr_code,
                   onPressed: () {
                     context.push('/attendance/qr-scanner/${widget.sessionId}');
                   },
-                  icon: const Icon(Icons.qr_code),
-                  label: const Text('Open QR Scanner'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  ),
+                  type: ButtonType.primary,
                 ),
               ],
             ),
@@ -435,16 +466,19 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         
         if (_recentRecognitions != null && _recentRecognitions!.isNotEmpty)
           Container(
-            padding: const EdgeInsets.all(16.0),
-            height: 150,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            height: 180,
+            color: AppColors.surface,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Recent Recognitions',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Expanded(
                   child: ListView.builder(
                     itemCount: _recentRecognitions!.length,
@@ -454,14 +488,22 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
                         dense: true,
                         leading: Icon(
                           record['status'] == 'PRESENT' ? Icons.check_circle : Icons.cancel,
-                          color: record['status'] == 'PRESENT' ? Colors.green : Colors.red,
+                          color: record['status'] == 'PRESENT' ? AppColors.success : AppColors.error,
                           size: 20,
                         ),
-                        title: Text(record['student_name']),
-                        subtitle: Text(record['student_id_str']),
+                        title: Text(
+                          record['student_name'],
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                        subtitle: Text(
+                          record['student_id_str'],
+                          style: AppTextStyles.bodySmall,
+                        ),
                         trailing: Text(
                           record['recognized_at']?.toString().split('T')[1].split('.')[0] ?? '',
-                          style: const TextStyle(fontSize: 12),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textHint,
+                          ),
                         ),
                       );
                     },
@@ -479,33 +521,36 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
       children: [
         // Statistics header
         if (_sessionStats != null)
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            color: Colors.blue.shade50,
+          AppCard(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            backgroundColor: AppColors.primary.withOpacity(0.05),
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildStatCard('Expected', _sessionStats!['total_students'].toString(), Icons.people),
-                    _buildStatCard('Present', _sessionStats!['present_count'].toString(), Icons.check_circle, Colors.green),
-                    _buildStatCard('Absent', _sessionStats!['absent_count'].toString(), Icons.cancel, Colors.red),
-                    _buildStatCard('Remaining', _sessionStats!['remaining_count'].toString(), Icons.hourglass_empty, Colors.orange),
+                    _buildStatCard('Expected', _sessionStats!['total_students'].toString(), Icons.people, AppColors.primary),
+                    _buildStatCard('Present', _sessionStats!['present_count'].toString(), Icons.check_circle, AppColors.success),
+                    _buildStatCard('Absent', _sessionStats!['absent_count'].toString(), Icons.cancel, AppColors.error),
+                    _buildStatCard('Remaining', _sessionStats!['remaining_count'].toString(), Icons.hourglass_empty, AppColors.warning),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 LinearProgressIndicator(
                   value: _sessionStats!['attendance_percentage'] / 100,
-                  backgroundColor: Colors.grey.shade300,
+                  backgroundColor: AppColors.border,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    _sessionStats!['attendance_percentage'] >= 75 ? Colors.green :
-                    _sessionStats!['attendance_percentage'] >= 50 ? Colors.orange : Colors.red,
+                    _sessionStats!['attendance_percentage'] >= 75 ? AppColors.success :
+                    _sessionStats!['attendance_percentage'] >= 50 ? AppColors.warning : AppColors.error,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Text(
                   'Attendance: ${_sessionStats!['attendance_percentage'].toStringAsFixed(1)}%',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -521,7 +566,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
                         aspectRatio: _cameraController!.value.aspectRatio,
                         child: CameraPreview(_cameraController!),
                       )
-                    : const Center(child: CircularProgressIndicator()),
+                    : const AppLoading(message: 'Initializing camera...'),
               ),
               if (_isCameraInitialized)
                 _buildFaceGuideOverlay(),
@@ -534,16 +579,19 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         // Recent recognitions
         if (_recentRecognitions != null && _recentRecognitions!.isNotEmpty)
           Container(
-            padding: const EdgeInsets.all(16.0),
-            height: 150,
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            height: 180,
+            color: AppColors.surface,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Recent Recognitions',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: AppTextStyles.titleMedium.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.sm),
                 Expanded(
                   child: ListView.builder(
                     itemCount: _recentRecognitions!.length,
@@ -553,14 +601,22 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
                         dense: true,
                         leading: Icon(
                           record['status'] == 'PRESENT' ? Icons.check_circle : Icons.cancel,
-                          color: record['status'] == 'PRESENT' ? Colors.green : Colors.red,
+                          color: record['status'] == 'PRESENT' ? AppColors.success : AppColors.error,
                           size: 20,
                         ),
-                        title: Text(record['student_name']),
-                        subtitle: Text(record['student_id_str']),
+                        title: Text(
+                          record['student_name'],
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                        subtitle: Text(
+                          record['student_id_str'],
+                          style: AppTextStyles.bodySmall,
+                        ),
                         trailing: Text(
                           record['recognized_at']?.toString().split('T')[1].split('.')[0] ?? '',
-                          style: const TextStyle(fontSize: 12),
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textHint,
+                          ),
                         ),
                       );
                     },
@@ -572,51 +628,37 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         
         // Controls
         Container(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          color: AppColors.surface,
           child: Column(
             children: [
               if (_recognitionStatus == null)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isRecognizing ? null : _captureAndRecognize,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: _isRecognizing ? Colors.grey : Colors.blue,
-                    ),
-                    child: _isRecognizing
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Capture & Recognize',
-                            style: TextStyle(fontSize: 16),
-                          ),
-                  ),
+                AppButton(
+                  text: 'Capture & Recognize',
+                  icon: Icons.camera_alt,
+                  onPressed: _isRecognizing ? null : _captureAndRecognize,
+                  isFullWidth: true,
+                  isLoading: _isRecognizing,
+                  type: _isRecognizing ? ButtonType.secondary : ButtonType.primary,
                 ),
               if (_errorMessage != null && _recognitionStatus == null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 16),
+                  padding: const EdgeInsets.only(top: AppSpacing.md),
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
+                      color: AppColors.error.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                      border: Border.all(color: AppColors.error.withOpacity(0.3)),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
-                        const SizedBox(width: 8),
+                        const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                        const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Text(
                             _errorMessage!,
-                            style: TextStyle(color: Colors.red.shade700),
+                            style: const TextStyle(color: AppColors.error, fontSize: 14),
                           ),
                         ),
                       ],
@@ -630,18 +672,23 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, [Color color = Colors.blue]) {
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
     return Column(
       children: [
         Icon(icon, color: color, size: 24),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.xs),
         Text(
           value,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: AppTextStyles.titleMedium.copyWith(
+            color: color,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+          ),
         ),
       ],
     );
@@ -654,7 +701,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         height: 350,
         decoration: BoxDecoration(
           border: Border.all(
-            color: Colors.white,
+            color: Colors.white.withOpacity(0.7),
             width: 3,
           ),
           borderRadius: BorderRadius.circular(140),
@@ -665,8 +712,12 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
             Positioned(top: 10, right: 10, child: _buildCornerMarker()),
             Positioned(bottom: 10, left: 10, child: _buildCornerMarker()),
             Positioned(bottom: 10, right: 10, child: _buildCornerMarker()),
-            const Center(
-              child: Icon(Icons.face, size: 80, color: Colors.white54),
+            Center(
+              child: Icon(
+                Icons.face,
+                size: 80,
+                color: Colors.white.withOpacity(0.5),
+              ),
             ),
           ],
         ),
@@ -679,7 +730,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
       width: 20,
       height: 20,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(0.7),
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -693,44 +744,51 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
 
     switch (_recognitionStatus) {
       case 'MATCH':
-        backgroundColor = Colors.green.withOpacity(0.9);
+        backgroundColor = AppColors.success.withOpacity(0.95);
         icon = Icons.check_circle;
-        title = 'Student Recognized';
+        title = '✓ STUDENT RECOGNIZED';
         subtitle = _alreadyMarked ? 'Already marked present' : 'Marked present';
         break;
       case 'UNKNOWN':
-        backgroundColor = Colors.orange.withOpacity(0.9);
+        backgroundColor = AppColors.warning.withOpacity(0.95);
         icon = Icons.person_off;
-        title = 'Unknown Person';
+        title = '? UNKNOWN PERSON';
         subtitle = 'No matching student found';
         break;
       case 'LOW_CONFIDENCE':
-        backgroundColor = Colors.amber.withOpacity(0.9);
+        backgroundColor = AppColors.warning.withOpacity(0.95);
         icon = Icons.help_outline;
-        title = 'Unable to Identify';
+        title = '! LOW CONFIDENCE';
         subtitle = 'Low confidence match';
         break;
       default:
-        backgroundColor = Colors.grey.withOpacity(0.9);
+        backgroundColor = AppColors.textSecondary.withOpacity(0.95);
         icon = Icons.info_outline;
         title = 'Unknown Status';
         subtitle = null;
     }
 
     return Positioned(
-      top: 20,
-      left: 16,
-      right: 16,
+      top: AppSpacing.lg,
+      left: AppSpacing.lg,
+      right: AppSpacing.lg,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           children: [
             Icon(icon, color: Colors.white, size: 48),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             Text(
               title,
               style: const TextStyle(
@@ -742,7 +800,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
             ),
             if (subtitle != null)
               Padding(
-                padding: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.only(top: AppSpacing.xs),
                 child: Text(
                   subtitle!,
                   style: const TextStyle(
@@ -753,7 +811,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
                 ),
               ),
             if (_recognitionStatus == 'MATCH' && _studentName != null) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 _studentName!,
                 style: const TextStyle(
@@ -781,32 +839,26 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
             ],
             if (_recognitionStatus == 'UNKNOWN' || _recognitionStatus == 'LOW_CONFIDENCE')
               Padding(
-                padding: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.only(top: AppSpacing.md),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ElevatedButton.icon(
+                    AppButton(
+                      text: 'Try Again',
+                      icon: Icons.refresh,
                       onPressed: _resetRecognition,
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text('Try Again'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: backgroundColor,
-                      ),
+                      type: ButtonType.outline,
                     ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
+                    const SizedBox(width: AppSpacing.sm),
+                    AppButton(
+                      text: 'Use QR',
+                      icon: Icons.qr_code,
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('QR scanning coming soon')),
-                        );
+                        setState(() {
+                          _scanMode = 'qr';
+                        });
                       },
-                      icon: const Icon(Icons.qr_code, size: 16),
-                      label: const Text('Use QR'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: backgroundColor,
-                      ),
+                      type: ButtonType.outline,
                     ),
                   ],
                 ),

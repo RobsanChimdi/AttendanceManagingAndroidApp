@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_text_styles.dart';
+import '../../widgets/app_card.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/dashboard_service.dart';
+import '../../services/websocket_service.dart';
 
 class TeacherDashboardScreen extends ConsumerStatefulWidget {
   const TeacherDashboardScreen({super.key});
@@ -64,6 +69,28 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
 
+    // Listen to real-time notification push events via WebSocket
+    ref.listen(notificationStreamProvider, (previous, next) {
+      next.whenData((payload) {
+        if (!context.mounted) return;
+        final message = payload['message'] ?? payload['title'] ?? 'New notification received';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.notifications_active, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(child: Text(message.toString())),
+              ],
+            ),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      });
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Teacher Dashboard'),
@@ -96,30 +123,32 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                           children: [
                             // Welcome section
                             if (user != null)
-                              Card(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Welcome, ${user.name}',
-                                        style: Theme.of(context).textTheme.headlineSmall,
+                              AppCard(
+                                padding: const EdgeInsets.all(AppSpacing.lg),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Welcome, ${user.name}',
+                                      style: AppTextStyles.headlineSmall.copyWith(
+                                        color: AppColors.primary,
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Teacher',
-                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                              color: Colors.grey,
-                                            ),
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      'Teacher',
+                                      style: AppTextStyles.bodyMedium.copyWith(
+                                        color: AppColors.textSecondary,
                                       ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        user.email,
-                                        style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                    const SizedBox(height: AppSpacing.sm),
+                                    Text(
+                                      user.email,
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textHint,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             const SizedBox(height: 24),
@@ -129,51 +158,45 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                               crossAxisCount: 2,
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              mainAxisSpacing: 16,
-                              crossAxisSpacing: 16,
+                              mainAxisSpacing: AppSpacing.md,
+                              crossAxisSpacing: AppSpacing.md,
                               childAspectRatio: 1.3,
                               children: [
-                                _buildStatCard(
-                                  context,
-                                  'Total Students',
-                                  '${_statistics!['total_students'] ?? 0}',
-                                  Icons.people,
-                                  Colors.blue,
+                                StatCard(
+                                  title: 'Total Students',
+                                  value: '${_statistics!['total_students'] ?? 0}',
+                                  icon: Icons.people,
+                                  color: AppColors.primary,
                                 ),
-                                _buildStatCard(
-                                  context,
-                                  'Present Today',
-                                  '${_statistics!['present_today'] ?? 0}',
-                                  Icons.check_circle,
-                                  Colors.green,
+                                StatCard(
+                                  title: 'Present Today',
+                                  value: '${_statistics!['present_today'] ?? 0}',
+                                  icon: Icons.check_circle,
+                                  color: AppColors.success,
                                 ),
-                                _buildStatCard(
-                                  context,
-                                  'Absent Today',
-                                  '${_statistics!['absent_today'] ?? 0}',
-                                  Icons.cancel,
-                                  Colors.red,
+                                StatCard(
+                                  title: 'Absent Today',
+                                  value: '${_statistics!['absent_today'] ?? 0}',
+                                  icon: Icons.cancel,
+                                  color: AppColors.error,
                                 ),
-                                _buildStatCard(
-                                  context,
-                                  'Average Attendance',
-                                  '${_statistics!['average_attendance']?.toStringAsFixed(1) ?? '0'}%',
-                                  Icons.trending_up,
-                                  Colors.purple,
+                                StatCard(
+                                  title: 'Average Attendance',
+                                  value: '${_statistics!['average_attendance']?.toStringAsFixed(1) ?? '0'}%',
+                                  icon: Icons.trending_up,
+                                  color: AppColors.secondary,
                                 ),
-                                _buildStatCard(
-                                  context,
-                                  'Critical Students',
-                                  '${_statistics!['critical_students'] ?? 0}',
-                                  Icons.warning,
-                                  Colors.orange,
+                                StatCard(
+                                  title: 'Critical Students',
+                                  value: '${_statistics!['critical_students'] ?? 0}',
+                                  icon: Icons.warning,
+                                  color: AppColors.warning,
                                 ),
-                                _buildStatCard(
-                                  context,
-                                  'Classes',
-                                  '${_statistics!['total_classes'] ?? 0}',
-                                  Icons.class_,
-                                  Colors.teal,
+                                StatCard(
+                                  title: 'Classes',
+                                  value: '${_statistics!['total_classes'] ?? 0}',
+                                  icon: Icons.class_,
+                                  color: AppColors.info,
                                 ),
                               ],
                             ),
@@ -182,64 +205,67 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
                             // Quick actions
                             Text(
                               'Quick Actions',
-                              style: Theme.of(context).textTheme.titleLarge,
+                              style: AppTextStyles.titleLarge.copyWith(
+                                color: AppColors.textPrimary,
+                              ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: AppSpacing.md),
                             GridView.count(
                               crossAxisCount: 2,
                               shrinkWrap: true,
                               physics: const NeverScrollableScrollPhysics(),
-                              mainAxisSpacing: 16,
-                              crossAxisSpacing: 16,
+                              mainAxisSpacing: AppSpacing.md,
+                              crossAxisSpacing: AppSpacing.md,
                               childAspectRatio: 1.5,
                               children: [
-                                _buildActionCard(
-                                  context,
-                                  'Start Attendance',
-                                  Icons.play_circle,
-                                  () {
+                                ActionCard(
+                                  title: 'Start Attendance',
+                                  icon: Icons.play_circle,
+                                  onTap: () {
                                     context.push('/attendance/start');
                                   },
                                 ),
-                                _buildActionCard(
-                                  context,
-                                  'Scan QR',
-                                  Icons.qr_code_scanner,
-                                  () {
+                                ActionCard(
+                                  title: 'Scan QR',
+                                  icon: Icons.qr_code_scanner,
+                                  onTap: () {
                                     context.push('/attendance/start');
                                   },
                                 ),
-                                _buildActionCard(
-                                  context,
-                                  'Add Student',
-                                  Icons.person_add,
-                                  () {
+                                ActionCard(
+                                  title: 'Add Student',
+                                  icon: Icons.person_add,
+                                  onTap: () {
                                     context.push('/students/add');
                                   },
                                 ),
-                                _buildActionCard(
-                                  context,
-                                  'Students',
-                                  Icons.people,
-                                  () {
+                                ActionCard(
+                                  title: 'Students',
+                                  icon: Icons.people,
+                                  onTap: () {
                                     context.push('/students');
                                   },
                                 ),
-                                _buildActionCard(
-                                  context,
-                                  'Critical Attendance',
-                                  Icons.warning,
-                                  Colors.red,
-                                  () {
+                                ActionCard(
+                                  title: 'Critical Attendance',
+                                  icon: Icons.warning,
+                                  color: AppColors.error,
+                                  onTap: () {
                                     context.push('/students/critical-attendance');
                                   },
                                 ),
-                                _buildActionCard(
-                                  context,
-                                  'Analytics',
-                                  Icons.analytics,
-                                  () {
+                                ActionCard(
+                                  title: 'Analytics',
+                                  icon: Icons.analytics,
+                                  onTap: () {
                                     context.push('/analytics');
+                                  },
+                                ),
+                                ActionCard(
+                                  title: 'Reports',
+                                  icon: Icons.assessment,
+                                  onTap: () {
+                                    context.push('/reports');
                                   },
                                 ),
                               ],
@@ -255,20 +281,33 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
   Widget _buildErrorView() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
+            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
+              ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.xl),
             ElevatedButton(
               onPressed: _loadStatistics,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.md,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+              ),
               child: const Text('Retry'),
             ),
           ],
@@ -282,87 +321,22 @@ class _TeacherDashboardScreenState extends ConsumerState<TeacherDashboardScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.inbox, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
+          const Icon(Icons.inbox, size: 64, color: AppColors.textHint),
+          const SizedBox(height: AppSpacing.lg),
           const Text(
             'No Data Available',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             'Pull to refresh',
-            style: TextStyle(color: Colors.grey[600]),
+            style: TextStyle(color: AppColors.textHint),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStatCard(
-    BuildContext context,
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    VoidCallback onTap, [
-    Color? color,
-  ]) {
-    final cardColor = color ?? Theme.of(context).primaryColor;
-    
-    return Card(
-      elevation: 2,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 40, color: cardColor),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

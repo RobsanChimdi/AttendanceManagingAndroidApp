@@ -18,6 +18,7 @@ import '../features/attendance/attendance_scanner_screen.dart';
 import '../features/attendance/start_attendance_screen.dart';
 import '../features/attendance/qr_scanner_screen.dart';
 import '../features/analytics/analytics_screen.dart';
+import '../features/reports/reports_screen.dart';
 
 // Import providers
 import '../providers/auth_provider.dart';
@@ -177,6 +178,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'analytics',
         builder: (context, state) {
           return const AnalyticsScreen();
+        },
+      ),
+      GoRoute(
+        path: '/reports',
+        name: 'reports',
+        builder: (context, state) {
+          return const ReportsScreen();
         },
       ),
     ],

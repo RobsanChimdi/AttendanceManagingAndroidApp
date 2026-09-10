@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum as SQLEnum, Date
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum as SQLEnum, Date, Boolean
 from sqlalchemy.orm import relationship
 import enum
 from app.database import Base
@@ -28,7 +28,7 @@ class Student(Base, TimestampMixin):
     qr_token = Column(String, unique=True, nullable=True)  # Secure token for二维码 attendance
     status = Column(SQLEnum(StudentStatus), default=StudentStatus.ACTIVE)
     critical_attendance = Column(String, nullable=True)  # Stores attendance percentage as string
-    is_critical = Column(String, nullable=True)  # Flag for critical attendance (true/false as string)
+    is_critical = Column(Boolean, default=False)  # Flag for critical attendance
     
     # Relationships
     class_relationship = relationship("Class", back_populates="students")

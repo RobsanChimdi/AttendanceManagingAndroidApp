@@ -1,12 +1,8 @@
 import 'package:dio/dio.dart';
-import 'dio_client.dart';
+import '../network/api_client.dart';
 
 class AnalyticsService {
-  late final Dio _dio;
-
-  AnalyticsService() {
-    _dio = DioClient().dio;
-  }
+  final Dio _dio = ApiClient.dio;
 
   Future<Map<String, dynamic>> getAttendanceTrend({int days = 30}) async {
     try {

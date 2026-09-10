@@ -3,6 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/student_models.dart';
 import '../../services/student_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_text_styles.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_button.dart';
+import '../../widgets/app_loading.dart';
+import '../../widgets/app_status_badge.dart';
 
 class StudentDetailsScreen extends ConsumerStatefulWidget {
   final int studentId;
@@ -52,25 +59,41 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Student Details'),
+          backgroundColor: AppColors.surface,
+          elevation: AppSpacing.elevationSm,
+        ),
+        body: const AppLoading(message: 'Loading student details...'),
       );
     }
 
     if (_errorMessage != null && _student == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Student Details')),
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Student Details'),
+          backgroundColor: AppColors.surface,
+          elevation: AppSpacing.elevationSm,
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(_errorMessage!),
-              const SizedBox(height: 16),
-              ElevatedButton(
+              const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                _errorMessage!,
+                style: AppTextStyles.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              AppButton(
+                text: 'Retry',
                 onPressed: _loadStudent,
-                child: const Text('Retry'),
+                type: ButtonType.primary,
               ),
             ],
           ),
@@ -79,66 +102,70 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
     }
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Student Details'),
+        backgroundColor: AppColors.surface,
+        elevation: AppSpacing.elevationSm,
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
               context.push('/students/${widget.studentId}/edit');
             },
+            color: AppColors.textSecondary,
           ),
         ],
       ),
       body: _student == null
           ? const Center(child: Text('Student not found'))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Profile Header
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 40,
-                            child: Text(
-                              '${_student!.firstName[0]}${_student!.lastName[0]}',
-                              style: const TextStyle(fontSize: 24),
+                  AppCard(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: AppColors.primary,
+                          child: Text(
+                            '${_student!.firstName[0]}${_student!.lastName[0]}',
+                            style: AppTextStyles.headlineSmall.copyWith(
+                              color: AppColors.surface,
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${_student!.firstName} ${_student!.middleName ?? ''} ${_student!.lastName}',
-                                  style: const TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                        ),
+                        const SizedBox(width: AppSpacing.lg),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${_student!.firstName} ${_student!.middleName ?? ''} ${_student!.lastName}',
+                                style: AppTextStyles.headlineSmall.copyWith(
+                                  color: AppColors.textPrimary,
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'ID: ${_student!.studentId}',
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                  ),
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              Text(
+                                'ID: ${_student!.studentId}',
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.textSecondary,
                                 ),
-                                const SizedBox(height: 4),
-                                _buildStatusChip(_student!.status),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: AppSpacing.xs),
+                              _buildStatusBadge(_student!.status),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.lg),
                   
                   // Personal Information Section
                   _buildSectionCard(
@@ -155,7 +182,7 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
                         _buildInfoRow('Date of Birth', _student!.dateOfBirth!),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.lg),
                   
                   // Academic Information Section
                   _buildSectionCard(
@@ -170,7 +197,7 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
                         _buildInfoRow('Class ID', _student!.classId.toString()),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.lg),
                   
                   // Guardian Information Section
                   _buildSectionCard(
@@ -185,7 +212,7 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
                         _buildInfoRow('Guardian Email', _student!.guardianEmail!),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.lg),
                   
                   // Face Enrollment Section
                   _buildSectionCard(
@@ -199,7 +226,7 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
                         _buildInfoRow('Model', '${_faceEnrollmentStatus?['model_name'] ?? 'Unknown'} (${_faceEnrollmentStatus?['model_version'] ?? 'Unknown'})'),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.lg),
                   
                   // Attendance Section
                   _buildSectionCard(
@@ -211,26 +238,28 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
                       _buildInfoRow('Absent Count', '0'),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.xl),
                   
                   // Action Buttons
-                  const Text(
+                  Text(
                     'Actions',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: AppTextStyles.titleLarge.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.lg),
                   
                   GridView.count(
                     crossAxisCount: 2,
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
+                    mainAxisSpacing: AppSpacing.md,
+                    crossAxisSpacing: AppSpacing.md,
                     children: [
                       _buildActionButton(
                         'Enroll Face',
                         Icons.face,
-                        Colors.blue,
+                        AppColors.primary,
                         () {
                           if (_student != null) {
                             context.push(
@@ -246,7 +275,7 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
                       _buildActionButton(
                         'Re-enroll Face',
                         Icons.refresh,
-                        Colors.orange,
+                        AppColors.warning,
                         () {
                           if (_student != null) {
                             context.push(
@@ -262,7 +291,7 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
                       _buildActionButton(
                         'Generate QR',
                         Icons.qr_code,
-                        Colors.green,
+                        AppColors.success,
                         () {
                           if (_student != null) {
                             context.push(
@@ -277,26 +306,20 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
                       _buildActionButton(
                         'View Attendance',
                         Icons.calendar_view_month,
-                        Colors.purple,
+                        AppColors.secondary,
                         () => _showComingSoonDialog('Attendance History'),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppSpacing.xl),
                   
                   // Delete Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _showDeleteDialog(),
-                      icon: const Icon(Icons.delete),
-                      label: const Text('Delete Student'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
+                  AppButton(
+                    text: 'Delete Student',
+                    icon: Icons.delete,
+                    onPressed: () => _showDeleteDialog(),
+                    isFullWidth: true,
+                    type: ButtonType.danger,
                   ),
                 ],
               ),
@@ -305,36 +328,33 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
   }
 
   Widget _buildSectionCard(String title, IconData icon, List<Widget> children) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: AppColors.primary, size: 24),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                title,
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: AppColors.textPrimary,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ...children,
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          ...children,
+        ],
       ),
     );
   }
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -342,8 +362,8 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
             width: 120,
             child: Text(
               label,
-              style: TextStyle(
-                color: Colors.grey[600],
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -351,7 +371,10 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w500),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -360,64 +383,69 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
   }
 
   Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onTap) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 32, color: color),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w500),
-              ),
-            ],
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      onTap: onTap,
+      backgroundColor: AppColors.surface,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 32, color: color),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildStatusChip(StudentStatus status) {
-    Color color;
-    String label;
-
+  Widget _buildStatusBadge(StudentStatus status) {
     switch (status) {
       case StudentStatus.active:
-        color = Colors.green;
-        label = 'Active';
-        break;
+        return const AppStatusBadge(
+          type: StatusType.present,
+          label: 'Active',
+        );
       case StudentStatus.inactive:
-        color = Colors.red;
-        label = 'Inactive';
-        break;
+        return const AppStatusBadge(
+          type: StatusType.absent,
+          label: 'Inactive',
+        );
       case StudentStatus.graduated:
-        color = Colors.blue;
-        label = 'Graduated';
-        break;
+        return const AppStatusBadge(
+          type: StatusType.info,
+          label: 'Graduated',
+        );
     }
-
-    return Chip(
-      label: Text(label),
-      backgroundColor: color.withOpacity(0.1),
-      labelStyle: TextStyle(color: color, fontSize: 12),
-    );
   }
 
   void _showComingSoonDialog(String feature) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Coming Soon'),
-        content: Text('$feature will be implemented in a later stage.'),
+        title: Text(
+          'Coming Soon',
+          style: AppTextStyles.titleMedium.copyWith(
+            color: AppColors.textPrimary,
+          ),
+        ),
+        content: Text(
+          '$feature will be implemented in a later stage.',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
         actions: [
-          TextButton(
+          AppButton(
+            text: 'OK',
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            type: ButtonType.primary,
           ),
         ],
       ),
@@ -428,20 +456,31 @@ class _StudentDetailsScreenState extends ConsumerState<StudentDetailsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Student'),
-        content: const Text('Are you sure you want to delete this student? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+        title: Text(
+          'Delete Student',
+          style: AppTextStyles.titleMedium.copyWith(
+            color: AppColors.textPrimary,
           ),
-          TextButton(
+        ),
+        content: Text(
+          'Are you sure you want to delete this student? This action cannot be undone.',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          AppButton(
+            text: 'Cancel',
+            onPressed: () => Navigator.pop(context),
+            type: ButtonType.secondary,
+          ),
+          AppButton(
+            text: 'Delete',
             onPressed: () async {
               Navigator.pop(context);
               await _deleteStudent();
             },
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            type: ButtonType.danger,
           ),
         ],
       ),

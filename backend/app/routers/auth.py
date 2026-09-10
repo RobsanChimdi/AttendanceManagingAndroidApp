@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from datetime import timedelta
 from pydantic import BaseModel
@@ -9,14 +9,18 @@ from app.security.password import verify_password
 from app.security.jwt import create_access_token, create_refresh_token, decode_token
 from app.security.dependencies import get_current_user_dependency
 from app.config import settings
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+limiter = Limiter(key_func=get_remote_address)
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 @router.post("/login")
-def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(request: Request, user_credentials: UserLogin, db: Session = Depends(get_db)):
     """
     Authenticate user and return access and refresh tokens.
     """

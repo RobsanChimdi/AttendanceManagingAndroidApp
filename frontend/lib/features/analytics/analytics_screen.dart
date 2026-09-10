@@ -4,6 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../services/analytics_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_text_styles.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_button.dart';
+import '../../widgets/app_loading.dart';
+import '../../widgets/app_empty_state.dart';
 
 class AnalyticsScreen extends ConsumerStatefulWidget {
   const AnalyticsScreen({super.key});
@@ -75,17 +82,21 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Analytics'),
+        backgroundColor: AppColors.surface,
+        elevation: AppSpacing.elevationSm,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadAnalytics,
+            color: AppColors.textSecondary,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppLoading(message: 'Loading analytics...')
           : _errorMessage != null
               ? _buildErrorView()
               : _attendanceTrend == null
@@ -95,7 +106,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                       onRefresh: _onRefresh,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16.0),
+                        padding: const EdgeInsets.all(AppSpacing.lg),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -105,7 +116,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                               Icons.trending_up,
                               _buildAttendanceTrendChart(),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: AppSpacing.xl),
                             
                             // Present vs Absent Distribution
                             _buildSectionCard(
@@ -113,7 +124,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                               Icons.pie_chart,
                               _buildPresentAbsentChart(),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: AppSpacing.xl),
                             
                             // Class Comparison
                             _buildSectionCard(
@@ -121,7 +132,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                               Icons.bar_chart,
                               _buildClassComparisonChart(),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: AppSpacing.xl),
                             
                             // Grade Comparison
                             _buildSectionCard(
@@ -129,7 +140,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                               Icons.school,
                               _buildGradeComparisonChart(),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: AppSpacing.xl),
                             
                             // Critical Attendance Breakdown
                             _buildSectionCard(
@@ -137,7 +148,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                               Icons.warning,
                               _buildCriticalAttendanceBreakdown(),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: AppSpacing.xl),
                           ],
                         ),
                       ),
@@ -148,21 +159,22 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   Widget _buildErrorView() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
+            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            const SizedBox(height: AppSpacing.lg),
             Text(
               _errorMessage!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
+              style: AppTextStyles.bodyMedium,
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
+            const SizedBox(height: AppSpacing.xl),
+            AppButton(
+              text: 'Retry',
               onPressed: _loadAnalytics,
-              child: const Text('Retry'),
+              type: ButtonType.primary,
             ),
           ],
         ),
@@ -171,60 +183,44 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
   }
 
   Widget _buildEmptyView() {
-    return Center(
+    return NoDataEmptyState(
+      message: 'Pull to refresh',
+      onRefresh: _loadAnalytics,
+    );
+  }
+
+  Widget _buildSectionCard(String title, IconData icon, Widget child) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.inbox, size: 64, color: Colors.grey),
-          const SizedBox(height: 16),
-          const Text(
-            'No Analytics Data Available',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Icon(icon, color: AppColors.primary, size: 24),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                title,
+                style: AppTextStyles.titleMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Pull to refresh',
-            style: TextStyle(color: Colors.grey[600]),
+          const SizedBox(height: AppSpacing.lg),
+          SizedBox(
+            height: 250,
+            child: child,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionCard(String title, IconData icon, Widget child) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 250,
-              child: child,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildAttendanceTrendChart() {
     if (_attendanceTrend == null || _attendanceTrend!['trend'] == null) {
-      return const Center(child: Text('No data available'));
+      return const Center(child: Text('No data available', style: AppTextStyles.bodyMedium));
     }
 
     final trend = _attendanceTrend!['trend'] as List;
@@ -237,6 +233,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           show: true,
           drawVerticalLine: false,
           horizontalInterval: 20,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: AppColors.border,
+            strokeWidth: 1,
+          ),
         ),
         titlesData: FlTitlesData(
           show: true,
@@ -249,7 +249,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
                       dates[value.toInt()],
-                      style: const TextStyle(fontSize: 10),
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   );
                 }
@@ -263,7 +265,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 if (value % 20 == 0) {
-                  return Text('${value.toInt()}%', style: const TextStyle(fontSize: 10));
+                  return Text(
+                    '${value.toInt()}%',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  );
                 }
                 return const SizedBox();
               },
@@ -281,13 +288,13 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               (index) => FlSpot(index.toDouble(), dataPoints[index]),
             ),
             isCurved: true,
-            color: Theme.of(context).primaryColor,
+            color: AppColors.primary,
             barWidth: 3,
             isStrokeCapRound: true,
             dotData: FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              color: AppColors.primary.withOpacity(0.1),
             ),
           ),
         ],
@@ -299,7 +306,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
   Widget _buildPresentAbsentChart() {
     if (_presentAbsentDistribution == null) {
-      return const Center(child: Text('No data available'));
+      return const Center(child: Text('No data available', style: AppTextStyles.bodyMedium));
     }
 
     final present = _presentAbsentDistribution!['present'] ?? 0;
@@ -307,7 +314,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     final notMarked = _presentAbsentDistribution!['not_marked'] ?? 0;
 
     if (present + absent + notMarked == 0) {
-      return const Center(child: Text('No attendance data available'));
+      return const Center(child: Text('No attendance data available', style: AppTextStyles.bodyMedium));
     }
 
     return PieChart(
@@ -317,7 +324,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             PieChartSectionData(
               value: present.toDouble(),
               title: '${((present / (present + absent + notMarked)) * 100).toStringAsFixed(1)}%',
-              color: Colors.green,
+              color: AppColors.success,
               radius: 80,
               titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
@@ -325,7 +332,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             PieChartSectionData(
               value: absent.toDouble(),
               title: '${((absent / (present + absent + notMarked)) * 100).toStringAsFixed(1)}%',
-              color: Colors.red,
+              color: AppColors.error,
               radius: 80,
               titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
@@ -333,7 +340,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             PieChartSectionData(
               value: notMarked.toDouble(),
               title: '${((notMarked / (present + absent + notMarked)) * 100).toStringAsFixed(1)}%',
-              color: Colors.grey,
+              color: AppColors.textHint,
               radius: 80,
               titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
@@ -346,12 +353,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
   Widget _buildClassComparisonChart() {
     if (_classComparison == null || _classComparison!['classes'] == null) {
-      return const Center(child: Text('No data available'));
+      return const Center(child: Text('No data available', style: AppTextStyles.bodyMedium));
     }
 
     final classes = _classComparison!['classes'] as List;
     if (classes.isEmpty) {
-      return const Center(child: Text('No class data available'));
+      return const Center(child: Text('No class data available', style: AppTextStyles.bodyMedium));
     }
 
     return BarChart(
@@ -384,7 +391,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
                       className.length > 10 ? '${className.substring(0, 10)}...' : className,
-                      style: const TextStyle(fontSize: 10),
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   );
                 }
@@ -397,7 +406,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 if (value % 20 == 0) {
-                  return Text('${value.toInt()}%', style: const TextStyle(fontSize: 10));
+                  return Text(
+                    '${value.toInt()}%',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  );
                 }
                 return const SizedBox();
               },
@@ -408,19 +422,26 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: false),
-        gridData: FlGridData(show: true, drawVerticalLine: false),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: AppColors.border,
+            strokeWidth: 1,
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildGradeComparisonChart() {
     if (_gradeComparison == null || _gradeComparison!['grades'] == null) {
-      return const Center(child: Text('No data available'));
+      return const Center(child: Text('No data available', style: AppTextStyles.bodyMedium));
     }
 
     final grades = _gradeComparison!['grades'] as List;
     if (grades.isEmpty) {
-      return const Center(child: Text('No grade data available'));
+      return const Center(child: Text('No grade data available', style: AppTextStyles.bodyMedium));
     }
 
     return BarChart(
@@ -453,7 +474,10 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(
                       grade,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   );
                 }
@@ -466,7 +490,12 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 if (value % 20 == 0) {
-                  return Text('${value.toInt()}%', style: const TextStyle(fontSize: 10));
+                  return Text(
+                    '${value.toInt()}%',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  );
                 }
                 return const SizedBox();
               },
@@ -477,14 +506,21 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: false),
-        gridData: FlGridData(show: true, drawVerticalLine: false),
+        gridData: FlGridData(
+          show: true,
+          drawVerticalLine: false,
+          getDrawingHorizontalLine: (value) => FlLine(
+            color: AppColors.border,
+            strokeWidth: 1,
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildCriticalAttendanceBreakdown() {
     if (_criticalAttendanceBreakdown == null) {
-      return const Center(child: Text('No data available'));
+      return const Center(child: Text('No data available', style: AppTextStyles.bodyMedium));
     }
 
     final totalCritical = _criticalAttendanceBreakdown!['total_critical'] ?? 0;
@@ -496,7 +532,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.check_circle, size: 48, color: Colors.green),
+            Icon(Icons.check_circle, size: 48, color: AppColors.success),
             SizedBox(height: 16),
             Text(
               'No Critical Students',
@@ -512,34 +548,46 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildCriticalStat('Total Critical', totalCritical.toString(), Icons.warning, Colors.red),
-            _buildCriticalStat('Classes Affected', byClass.length.toString(), Icons.class_, Colors.orange),
-            _buildCriticalStat('Grades Affected', byGrade.length.toString(), Icons.school, Colors.purple),
+            _buildCriticalStat('Total Critical', totalCritical.toString(), Icons.warning, AppColors.error),
+            _buildCriticalStat('Classes Affected', byClass.length.toString(), Icons.class_, AppColors.warning),
+            _buildCriticalStat('Grades Affected', byGrade.length.toString(), Icons.school, AppColors.secondary),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         if (byClass.isNotEmpty) ...[
-          const Text('By Class:', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
+          Text(
+            'By Class:',
+            style: AppTextStyles.titleMedium.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: byClass.map((cls) => Chip(
-              label: Text('${cls['class_name']}: ${cls['count']}'),
-              backgroundColor: Colors.orange.shade100,
+              label: Text('${cls['class_name']}: ${cls['count']}', style: AppTextStyles.bodySmall),
+              backgroundColor: AppColors.warning.withOpacity(0.1),
             )).toList(),
           ),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         if (byGrade.isNotEmpty) ...[
-          const Text('By Grade:', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
+          Text(
+            'By Grade:',
+            style: AppTextStyles.titleMedium.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
             children: byGrade.map((grade) => Chip(
-              label: Text('Grade ${grade['grade']}: ${grade['count']}'),
-              backgroundColor: Colors.purple.shade100,
+              label: Text('Grade ${grade['grade']}: ${grade['count']}', style: AppTextStyles.bodySmall),
+              backgroundColor: AppColors.secondary.withOpacity(0.1),
             )).toList(),
           ),
         ],
@@ -551,7 +599,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
     return Column(
       children: [
         Icon(icon, color: color, size: 32),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         Text(
           value,
           style: TextStyle(
@@ -562,7 +610,9 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
         ),
         Text(
           label,
-          style: TextStyle(color: Colors.grey[600]),
+          style: AppTextStyles.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+          ),
         ),
       ],
     );
@@ -575,26 +625,26 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
 
   Color _getClassColor(int index) {
     final colors = [
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.teal,
-      Colors.red,
-      Colors.indigo,
-      Colors.amber,
+      AppColors.primary,
+      AppColors.success,
+      AppColors.warning,
+      AppColors.secondary,
+      AppColors.info,
+      AppColors.error,
+      AppColors.primaryDark,
+      AppColors.secondaryDark,
     ];
     return colors[index % colors.length];
   }
 
   Color _getGradeColor(int index) {
     final colors = [
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.teal,
-      Colors.red,
+      AppColors.primary,
+      AppColors.success,
+      AppColors.warning,
+      AppColors.secondary,
+      AppColors.info,
+      AppColors.error,
     ];
     return colors[index % colors.length];
   }

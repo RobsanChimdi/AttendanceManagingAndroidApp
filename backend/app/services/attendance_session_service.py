@@ -180,7 +180,7 @@ class AttendanceSessionService:
                 # Update student's attendance fields
                 self.student_repo.update(student, {
                     "critical_attendance": str(attendance_pct),
-                    "is_critical": "true" if attendance_pct < self.attendance_threshold else "false"
+                    "is_critical": attendance_pct < self.attendance_threshold
                 })
                 
                 # Check if critical and create notification
@@ -201,7 +201,7 @@ class AttendanceSessionService:
                     
                     if not recent_notification:
                         # Create notification
-                        message = f"Your child {student.firstName} {student.lastName} currently has an attendance rate of {attendance_pct}%, which is below the required {self.attendance_threshold}% threshold. Please contact the school for more information."
+                        message = f"Your child {student.first_name} {student.last_name} currently has an attendance rate of {attendance_pct:.1f}%, which is below the required {self.attendance_threshold}% threshold. Please contact the school for more information."
                         
                         notification_data = {
                             "student_id": student.id,
@@ -268,8 +268,8 @@ class AttendanceSessionService:
                 result.append({
                     "attendance_id": record.id,
                     "student_id": student.id,
-                    "student_name": f"{student.firstName} {student.lastName}",
-                    "student_id_str": student.studentId,
+                    "student_name": f"{student.first_name} {student.last_name}",
+                    "student_id_str": student.student_id,
                     "status": record.status.value,
                     "method": record.method.value if record.method else None,
                     "recognized_at": record.recognized_at.isoformat() if record.recognized_at else None

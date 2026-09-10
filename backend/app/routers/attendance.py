@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.repositories.attendance_session_repository import AttendanceSessionRepository
@@ -11,14 +11,18 @@ from app.models.attendance import AttendanceStatus, AttendanceMethod
 from app.services.attendance_session_service import AttendanceSessionService
 from app.schemas.attendance_session import AttendanceSessionCreate, AttendanceSessionResponse
 from app.config import settings
+from app.security.dependencies import require_admin_or_teacher
 from pydantic import BaseModel
 import pickle
 import numpy as np
 import logging
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
+limiter = Limiter(key_func=get_remote_address)
 
 class QRAttendanceRequest(BaseModel):
     qr_token: str
@@ -26,9 +30,12 @@ class QRAttendanceRequest(BaseModel):
 # Session Management Endpoints
 
 @router.post("/sessions", response_model=AttendanceSessionResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
 def create_session(
+    request: Request,
     session_data: AttendanceSessionCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Create a new attendance session.
@@ -42,7 +49,7 @@ def create_session(
         logger.error(f"Error creating attendance session: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create attendance session: {str(e)}"
+            detail="Failed to create attendance session"
         )
 
 @router.get("/sessions/{session_id}", response_model=AttendanceSessionResponse)
@@ -66,9 +73,12 @@ def get_session(
         )
 
 @router.post("/sessions/{session_id}/start", response_model=AttendanceSessionResponse)
+@limiter.limit("30/minute")
 def start_session(
+    request: Request,
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Start an attendance session (change status to OPEN).
@@ -82,13 +92,16 @@ def start_session(
         logger.error(f"Error starting attendance session: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to start attendance session: {str(e)}"
+            detail="Failed to start attendance session"
         )
 
 @router.post("/sessions/{session_id}/close")
+@limiter.limit("30/minute")
 def close_session(
+    request: Request,
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Close an attendance session and mark remaining students as absent.
@@ -103,13 +116,16 @@ def close_session(
         logger.error(f"Error closing attendance session: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to close attendance session: {str(e)}"
+            detail="Failed to close attendance session"
         )
 
 @router.get("/sessions/{session_id}/statistics")
+@limiter.limit("60/minute")
 def get_session_statistics(
+    request: Request,
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Get attendance statistics for a session.
@@ -123,13 +139,16 @@ def get_session_statistics(
         logger.error(f"Error getting session statistics: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get session statistics: {str(e)}"
+            detail="Failed to get session statistics"
         )
 
 @router.get("/sessions/{session_id}/attendance")
+@limiter.limit("60/minute")
 def get_session_attendance(
+    request: Request,
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Get all attendance records for a session with student details.
@@ -143,20 +162,24 @@ def get_session_attendance(
         logger.error(f"Error getting session attendance: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get session attendance: {str(e)}"
+            detail="Failed to get session attendance"
         )
 
 # Face Recognition Endpoint
 
 @router.post("/sessions/{session_id}/recognize")
+@limiter.limit("60/minute")
 async def recognize_face(
+    request: Request,
     session_id: int,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Recognize a face from an uploaded image and match against enrolled students.
     Returns match status, student info, and confidence if matched.
+    IMPORTANT: This endpoint only recognizes faces, never enrolls unknown faces.
     """
     try:
         from app.facial_recognition.service import face_recognition_service
@@ -262,8 +285,8 @@ async def recognize_face(
                 return {
                     "status": "MATCH",
                     "student_id": student.id,
-                    "student_name": f"{student.firstName} {student.lastName}",
-                    "student_id_str:": student.studentId,
+                    "student_name": f"{student.first_name} {student.last_name}",
+                    "student_id_str": student.student_id,
                     "confidence": best_confidence,
                     "already_marked": True,
                     "message": "Student already marked as present"
@@ -281,8 +304,8 @@ async def recognize_face(
             return {
                 "status": "MATCH",
                 "student_id": student.id,
-                "student_name": f"{student.firstName} {student.lastName}",
-                "student_id_str": student.studentId,
+                "student_name": f"{student.first_name} {student.last_name}",
+                "student_id_str": student.student_id,
                 "confidence": best_confidence,
                 "already_marked": False,
                 "message": "Student recognized and marked present"
@@ -306,16 +329,19 @@ async def recognize_face(
         logger.error(f"Error in face recognition: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Face recognition failed: {str(e)}"
+            detail="Face recognition failed"
         )
 
 # QR Attendance Endpoint
 
-@router.post("/sessions/{session_id}/qr-attendance")
-async def mark_qr_attendance(
+@router.post("/sessions/{session_id}/qr")
+@limiter.limit("60/minute")
+def mark_qr_attendance(
+    request: Request,
     session_id: int,
-    qr_request: QRAttendanceRequest,
-    db: Session = Depends(get_db)
+    request_data: QRAttendanceRequest,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Mark attendance using QR code token.
@@ -340,7 +366,7 @@ async def mark_qr_attendance(
         
         # Find student by QR token
         student_repo = StudentRepository(db)
-        student = student_repo.get_by_qr_token(qr_request.qr_token)
+        student = student_repo.get_by_qr_token(request_data.qr_token)
         
         if not student:
             return {
@@ -363,8 +389,8 @@ async def mark_qr_attendance(
             return {
                 "status": "ALREADY_PRESENT",
                 "student_id": student.id,
-                "student_name": f"{student.firstName} {student.lastName}",
-                "student_id_str": student.studentId,
+                "student_name": f"{student.first_name} {student.last_name}",
+                "student_id_str": student.student_id,
                 "message": "Student already marked present"
             }
         
@@ -380,8 +406,8 @@ async def mark_qr_attendance(
         return {
             "status": "MATCH",
             "student_id": student.id,
-            "student_name": f"{student.firstName} {student.lastName}",
-            "student_id_str": student.studentId,
+            "student_name": f"{student.first_name} {student.last_name}",
+            "student_id_str": student.student_id,
             "message": "Attendance marked successfully"
         }
             

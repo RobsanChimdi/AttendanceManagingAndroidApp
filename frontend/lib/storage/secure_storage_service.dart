@@ -16,7 +16,7 @@ class SecureStorageService {
   static const _userRoleKey = 'user_role';
 
   // Save tokens
-  Future<void> saveTokens({
+  static Future<void> saveTokens({
     required String accessToken,
     required String refreshToken,
   }) async {
@@ -25,17 +25,17 @@ class SecureStorageService {
   }
 
   // Get access token
-  Future<String?> getAccessToken() async {
+  static Future<String?> getAccessToken() async {
     return await _storage.read(key: _accessTokenKey);
   }
 
   // Get refresh token
-  Future<String?> getRefreshToken() async {
+  static Future<String?> getRefreshToken() async {
     return await _storage.read(key: _refreshTokenKey);
   }
 
   // Save user info
-  Future<void> saveUserInfo({
+  static Future<void> saveUserInfo({
     required int userId,
     required String userRole,
   }) async {
@@ -44,18 +44,18 @@ class SecureStorageService {
   }
 
   // Get user ID
-  Future<int?> getUserId() async {
+  static Future<int?> getUserId() async {
     final userIdStr = await _storage.read(key: _userIdKey);
     return userIdStr != null ? int.tryParse(userIdStr) : null;
   }
 
   // Get user role
-  Future<String?> getUserRole() async {
+  static Future<String?> getUserRole() async {
     return await _storage.read(key: _userRoleKey);
   }
 
   // Clear all auth data
-  Future<void> clearAuthData() async {
+  static Future<void> clearAuthData() async {
     await _storage.delete(key: _accessTokenKey);
     await _storage.delete(key: _refreshTokenKey);
     await _storage.delete(key: _userIdKey);
@@ -63,7 +63,7 @@ class SecureStorageService {
   }
 
   // Check if user is authenticated
-  Future<bool> isAuthenticated() async {
+  static Future<bool> isAuthenticated() async {
     final token = await getAccessToken();
     return token != null && token.isNotEmpty;
   }

@@ -1,14 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.database import get_db
 from app.services.student_service import StudentService
 from app.schemas.student import StudentCreate, StudentUpdate, StudentResponse, StudentStatus
+from app.security.dependencies import require_admin_or_teacher
 from pydantic import BaseModel
 import secrets
 import string
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/students", tags=["Students"])
+limiter = Limiter(key_func=get_remote_address)
 
 class StudentFilterResponse(BaseModel):
     students: List[StudentResponse]
@@ -17,7 +21,9 @@ class StudentFilterResponse(BaseModel):
     limit: int
 
 @router.get("/", response_model=StudentFilterResponse)
+@limiter.limit("60/minute")
 def list_students(
+    request: Request,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     class_id: Optional[int] = Query(None),
@@ -27,7 +33,8 @@ def list_students(
     search: Optional[str] = Query(None),
     sort_by: Optional[str] = Query(None, description="Field to sort by: first_name, last_name, student_id, grade, section, status"),
     sort_order: Optional[str] = Query("asc", regex="^(asc|desc)$"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     List all registered students with pagination, filtering, search, and sorting.
@@ -47,7 +54,8 @@ def list_students(
     return result
 
 @router.get("/student-id/{student_id}", response_model=StudentResponse)
-def get_student_by_student_id(student_id: str, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+def get_student_by_student_id(request: Request, student_id: str, db: Session = Depends(get_db), current_user = Depends(require_admin_or_teacher)):
     """
     Get a specific student by student_id.
     """
@@ -55,11 +63,14 @@ def get_student_by_student_id(student_id: str, db: Session = Depends(get_db)):
     return student_service.get_student_by_student_id(student_id)
 
 @router.get("/class/{class_id}", response_model=List[StudentResponse])
+@limiter.limit("60/minute")
 def get_students_by_class(
+    request: Request,
     class_id: int,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Get all students for a specific class.
@@ -68,11 +79,14 @@ def get_students_by_class(
     return student_service.get_students_by_class(class_id, skip=skip, limit=limit)
 
 @router.get("/search/{name}", response_model=List[StudentResponse])
+@limiter.limit("60/minute")
 def search_students(
+    request: Request,
     name: str,
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Search students by name.
@@ -81,7 +95,8 @@ def search_students(
     return student_service.search_students(name, skip=skip, limit=limit)
 
 @router.get("/{student_id}", response_model=StudentResponse)
-def get_student(student_id: int, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+def get_student(request: Request, student_id: int, db: Session = Depends(get_db), current_user = Depends(require_admin_or_teacher)):
     """
     Get a specific student by ID.
     """
@@ -89,7 +104,8 @@ def get_student(student_id: int, db: Session = Depends(get_db)):
     return student_service.get_student(student_id)
 
 @router.post("/", response_model=StudentResponse, status_code=status.HTTP_201_CREATED)
-def create_student(student_in: StudentCreate, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def create_student(request: Request, student_in: StudentCreate, db: Session = Depends(get_db), current_user = Depends(require_admin_or_teacher)):
     """
     Register a new student.
     """
@@ -97,7 +113,8 @@ def create_student(student_in: StudentCreate, db: Session = Depends(get_db)):
     return student_service.create_student(student_in)
 
 @router.put("/{student_id}", response_model=StudentResponse)
-def update_student(student_id: int, student_in: StudentUpdate, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def update_student(request: Request, student_id: int, student_in: StudentUpdate, db: Session = Depends(get_db), current_user = Depends(require_admin_or_teacher)):
     """
     Update an existing student.
     """
@@ -105,7 +122,8 @@ def update_student(student_id: int, student_in: StudentUpdate, db: Session = Dep
     return student_service.update_student(student_id, student_in)
 
 @router.delete("/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_student(student_id: int, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def delete_student(request: Request, student_id: int, db: Session = Depends(get_db), current_user = Depends(require_admin_or_teacher)):
     """
     Delete a student.
     """
@@ -114,7 +132,8 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     return None
 
 @router.patch("/{student_id}/deactivate", response_model=StudentResponse)
-def deactivate_student(student_id: int, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def deactivate_student(request: Request, student_id: int, db: Session = Depends(get_db), current_user = Depends(require_admin_or_teacher)):
     """
     Deactivate a student (soft delete).
     """
@@ -122,14 +141,18 @@ def deactivate_student(student_id: int, db: Session = Depends(get_db)):
     return student_service.deactivate_student(student_id)
 
 @router.post("/{student_id}/face/enroll")
+@limiter.limit("10/minute")
 async def enroll_face(
+    request: Request,
     student_id: int,
     files: List[UploadFile] = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Enroll a student's face by uploading multiple face samples (5 recommended).
     Each sample should be a clear photo of the student's face from different angles.
+    IMPORTANT: Face enrollment requires explicit action and authentication.
     """
     try:
         from app.facial_recognition.service import face_recognition_service
@@ -196,6 +219,9 @@ async def enroll_face(
                 embeddings.append(embedding)
                 valid_samples += 1
                 
+                # Image bytes are not stored - only the embedding is stored
+                # This ensures no unnecessary raw image storage
+                
             except Exception as e:
                 failed_samples.append({
                     "sample": i + 1,
@@ -231,7 +257,7 @@ async def enroll_face(
         return {
             "message": "Face enrolled successfully",
             "student_id": student_id,
-            "student_name": f"{student.firstName} {student.lastName}",
+            "student_name": f"{student.first_name} {student.last_name}",
             "valid_samples": valid_samples,
             "total_samples": len(files),
             "failed_samples": failed_samples,
@@ -243,11 +269,12 @@ async def enroll_face(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Facial enrollment failed: {e}"
+            detail="Facial enrollment failed"
         )
 
 @router.get("/{student_id}/face/status")
-async def get_face_enrollment_status(student_id: int, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+async def get_face_enrollment_status(request: Request, student_id: int, db: Session = Depends(get_db), current_user = Depends(require_admin_or_teacher)):
     """
     Check if a student has face enrollment.
     """
@@ -268,7 +295,7 @@ async def get_face_enrollment_status(student_id: int, db: Session = Depends(get_
             return {
                 "enrolled": True,
                 "student_id": student_id,
-                "student_name": f"{student.firstName} {student.lastName}",
+                "student_name": f"{student.first_name} {student.last_name}",
                 "enrollment_date": latest.created_at.isoformat() if latest else None,
                 "model_name": latest.model_name if latest else None,
                 "model_version": latest.model_version if latest else None,
@@ -278,18 +305,19 @@ async def get_face_enrollment_status(student_id: int, db: Session = Depends(get_
             return {
                 "enrolled": False,
                 "student_id": student_id,
-                "student_name": f"{student.firstName} {student.lastName}"
+                "student_name": f"{student.first_name} {student.last_name}"
             }
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to check enrollment status: {e}"
+            detail="Failed to check enrollment status"
         )
 
 @router.post("/{student_id}/qr-token")
-async def generate_qr_token(student_id: int, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def generate_qr_token(request: Request, student_id: int, db: Session = Depends(get_db), current_user = Depends(require_admin_or_teacher)):
     """
     Generate or regenerate a secure QR token for a student.
     The token is a random secure string used for QR-based attendance.
@@ -315,7 +343,7 @@ async def generate_qr_token(student_id: int, db: Session = Depends(get_db)):
         
         return {
             "student_id": student_id,
-            "student_name": f"{student.firstName} {student.lastName}",
+            "student_name": f"{student.first_name} {student.last_name}",
             "qr_token": qr_token
         }
     except HTTPException:
@@ -323,11 +351,12 @@ async def generate_qr_token(student_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate QR token: {e}"
+            detail="Failed to generate QR token"
         )
 
 @router.get("/{student_id}/qr-token")
-async def get_qr_token(student_id: int, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+async def get_qr_token(request: Request, student_id: int, db: Session = Depends(get_db), current_user = Depends(require_admin_or_teacher)):
     """
     Get the current QR token for a student.
     """
@@ -351,7 +380,7 @@ async def get_qr_token(student_id: int, db: Session = Depends(get_db)):
         
         return {
             "student_id": student_id,
-            "student_name": f"{student.firstName} {student.lastName}",
+            "student_name": f"{student.first_name} {student.last_name}",
             "qr_token": student.qr_token
         }
     except HTTPException:
@@ -359,11 +388,12 @@ async def get_qr_token(student_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get QR token: {e}"
+            detail="Failed to get QR token"
         )
 
 @router.get("/{student_id}/attendance-summary")
-async def get_attendance_summary(student_id: int, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+async def get_attendance_summary(request: Request, student_id: int, db: Session = Depends(get_db), current_user = Depends(require_admin_or_teacher)):
     """
     Get attendance summary for a student including percentage and critical status.
     """
@@ -391,8 +421,8 @@ async def get_attendance_summary(student_id: int, db: Session = Depends(get_db))
         
         return {
             "student_id": student_id,
-            "student_name": f"{student.firstName} {student.lastName}",
-            "student_id_str": student.studentId,
+            "student_name": f"{student.first_name} {student.last_name}",
+            "student_id_str": student.student_id,
             "attendance_percentage": attendance_percentage,
             "is_critical": attendance_percentage < 50.0,
             "required_percentage": 50.0,
@@ -410,15 +440,18 @@ async def get_attendance_summary(student_id: int, db: Session = Depends(get_db))
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get attendance summary: {e}"
+            detail="Failed to get attendance summary"
         )
 
 @router.get("/critical-attendance")
+@limiter.limit("60/minute")
 async def get_critical_attendance_students(
+    request: Request,
     threshold: float = 50.0,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Get all students with attendance percentage below the threshold.
@@ -440,8 +473,8 @@ async def get_critical_attendance_students(
             
             result.append({
                 "student_id": student.id,
-                "student_name": f"{student.firstName} {student.lastName}",
-                "student_id_str": student.studentId,
+                "student_name": f"{student.first_name} {student.last_name}",
+                "student_id_str": student.student_id,
                 "grade": student.grade,
                 "section": student.section,
                 "attendance_percentage": attendance_percentage,
@@ -462,5 +495,5 @@ async def get_critical_attendance_students(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get critical attendance students: {e}"
+            detail="Failed to get critical attendance students"
         )

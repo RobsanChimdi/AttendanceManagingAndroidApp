@@ -26,9 +26,11 @@ class StudentRepository(BaseRepository[Student]):
         return self.db.query(Student).filter(Student.status == StudentStatus.ACTIVE).count()
 
     def search_by_name(self, name: str, skip: int = 0, limit: int = 100) -> List[Student]:
+        # Use parameterized query to prevent SQL injection
+        search_pattern = f"%{name}%"
         return self.db.query(Student).filter(
-            Student.first_name.ilike(f"%{name}%") | 
-            Student.last_name.ilike(f"%{name}%")
+            Student.first_name.ilike(search_pattern) | 
+            Student.last_name.ilike(search_pattern)
         ).offset(skip).limit(limit).all()
 
     def filter_students(
@@ -59,11 +61,13 @@ class StudentRepository(BaseRepository[Student]):
             query = query.filter(Student.status == status)
         
         if search is not None:
+            # Use parameterized query to prevent SQL injection
+            search_pattern = f"%{search}%"
             query = query.filter(
                 or_(
-                    Student.first_name.ilike(f"%{search}%"),
-                    Student.last_name.ilike(f"%{search}%"),
-                    Student.student_id.ilike(f"%{search}%")
+                    Student.first_name.ilike(search_pattern),
+                    Student.last_name.ilike(search_pattern),
+                    Student.student_id.ilike(search_pattern)
                 )
             )
         
@@ -102,11 +106,13 @@ class StudentRepository(BaseRepository[Student]):
             query = query.filter(Student.status == status)
         
         if search is not None:
+            # Use parameterized query to prevent SQL injection
+            search_pattern = f"%{search}%"
             query = query.filter(
                 or_(
-                    Student.first_name.ilike(f"%{search}%"),
-                    Student.last_name.ilike(f"%{search}%"),
-                    Student.student_id.ilike(f"%{search}%")
+                    Student.first_name.ilike(search_pattern),
+                    Student.last_name.ilike(search_pattern),
+                    Student.student_id.ilike(search_pattern)
                 )
             )
         

@@ -33,7 +33,31 @@ class NotificationService:
             )
         
         notification_data = notification_in.model_dump()
-        return self.notification_repo.create(notification_data)
+        created_notif = self.notification_repo.create(notification_data)
+        
+        # Broadcast via WebSocket (async safe)
+        try:
+            import asyncio
+            from app.services.websocket_manager import ws_manager
+            event_payload = {
+                "event": "new_notification",
+                "notification": {
+                    "id": created_notif.id,
+                    "student_id": created_notif.student_id,
+                    "guardian_name": created_notif.guardian_name,
+                    "message": created_notif.message,
+                    "status": created_notif.status.value if hasattr(created_notif.status, 'value') else str(created_notif.status),
+                    "created_at": created_notif.created_at.isoformat() if created_notif.created_at else None
+                }
+            }
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(ws_manager.broadcast(event_payload))
+        except Exception:
+            pass # Non-blocking safeguard for sync contexts
+            
+        return created_notif
+
 
     def update_notification(self, notification_id: int, notification_in: NotificationUpdate) -> Notification:
         notification = self.get_notification(notification_id)

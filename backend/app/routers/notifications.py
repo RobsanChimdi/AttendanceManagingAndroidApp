@@ -1,18 +1,25 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.repositories.notification_repository import NotificationRepository
 from app.models.notification import NotificationStatus
+from app.security.dependencies import require_admin_or_teacher
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
+limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/")
+@limiter.limit("60/minute")
 async def get_notifications(
+    request: Request,
     status: NotificationStatus = None,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Get all notifications with optional status filter.
@@ -51,15 +58,18 @@ async def get_notifications(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get notifications: {e}"
+            detail="Failed to get notifications"
         )
 
 @router.get("/student/{student_id}")
+@limiter.limit("60/minute")
 async def get_student_notifications(
+    request: Request,
     student_id: int,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Get all notifications for a specific student.
@@ -92,5 +102,5 @@ async def get_student_notifications(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get student notifications: {e}"
+            detail="Failed to get student notifications"
         )

@@ -1,6 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_text_styles.dart';
+import '../../widgets/app_card.dart';
+import '../../widgets/app_status_badge.dart';
+import '../../widgets/app_empty_state.dart';
+import '../../widgets/app_loading.dart';
 import '../../models/student_models.dart';
 import '../../services/student_service.dart';
 
@@ -262,40 +269,62 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Students'),
+        backgroundColor: AppColors.surface,
+        elevation: AppSpacing.elevationSm,
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: _showFilterDialog,
+            tooltip: 'Filter',
           ),
           IconButton(
             icon: const Icon(Icons.sort),
             onPressed: _showSortDialog,
+            tooltip: 'Sort',
           ),
         ],
       ),
       body: Column(
         children: [
           // Search bar
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            color: AppColors.surface,
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search by name or student ID...',
-                prefixIcon: const Icon(Icons.search),
+                hintStyle: TextStyle(color: AppColors.textHint),
+                prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear, color: AppColors.textSecondary),
                         onPressed: () {
                           _searchController.clear();
                           _loadStudents();
                         },
                       )
                     : null,
+                filled: true,
+                fillColor: AppColors.inputBackground,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                  borderSide: const BorderSide(color: AppColors.inputFocusedBorder, width: 2),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
                 ),
               ),
               onChanged: (value) {
@@ -312,71 +341,103 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
           // Student list
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const AppLoading(message: 'Loading students...')
                 : _errorMessage != null
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                            const SizedBox(height: 16),
-                            Text(_errorMessage!),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: _loadStudents,
-                              child: const Text('Retry'),
-                            ),
-                          ],
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.xl),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                              const SizedBox(height: AppSpacing.lg),
+                              Text(
+                                _errorMessage!,
+                                style: AppTextStyles.bodyMedium,
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: AppSpacing.xl),
+                              ElevatedButton(
+                                onPressed: _loadStudents,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.xl,
+                                    vertical: AppSpacing.md,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                                  ),
+                                ),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ),
                         ),
                       )
                     : _students.isEmpty
-                        ? const Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.people_outline, size: 64, color: Colors.grey),
-                                SizedBox(height: 16),
-                                Text('No students found'),
-                              ],
-                            ),
+                        ? NoSearchResultsEmptyState(
+                            message: 'Try adjusting your search or filters',
                           )
                         : ListView.builder(
+                            padding: const EdgeInsets.all(AppSpacing.md),
                             itemCount: _students.length,
                             itemBuilder: (context, index) {
                               final student = _students[index];
-                              return Card(
-                                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    child: Text(
-                                      '${student.firstName[0]}${student.lastName[0]}',
-                                    ),
-                                  ),
-                                  title: Text(
-                                    '${student.firstName} ${student.lastName}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text('ID: ${student.studentId}'),
-                                      if (student.grade != null || student.section != null)
-                                        Text(
-                                          '${student.grade ?? ''} ${student.section ?? ''}'.trim(),
+                              return AppCard(
+                                margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                                onTap: () {
+                                  context.push('/students/${student.id}');
+                                },
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                                      child: Text(
+                                        '${student.firstName[0]}${student.lastName[0]}',
+                                        style: TextStyle(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                    ],
-                                  ),
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      _buildStatusChip(student.status),
-                                      const SizedBox(width: 8),
-                                      const Icon(Icons.chevron_right),
-                                    ],
-                                  ),
-                                  onTap: () {
-                                    context.push('/students/${student.id}');
-                                  },
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.md),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${student.firstName} ${student.lastName}',
+                                            style: AppTextStyles.titleMedium.copyWith(
+                                              color: AppColors.textPrimary,
+                                            ),
+                                          ),
+                                          const SizedBox(height: AppSpacing.xs),
+                                          Text(
+                                            'ID: ${student.studentId}',
+                                            style: AppTextStyles.bodySmall.copyWith(
+                                              color: AppColors.textSecondary,
+                                            ),
+                                          ),
+                                          if (student.grade != null || student.section != null)
+                                            Text(
+                                              '${student.grade ?? ''} ${student.section ?? ''}'.trim(),
+                                              style: AppTextStyles.bodySmall.copyWith(
+                                                color: AppColors.textSecondary,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    _buildStatusBadge(student.status),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Icon(
+                                      Icons.chevron_right,
+                                      color: AppColors.textHint,
+                                    ),
+                                  ],
                                 ),
                               );
                             },
@@ -385,12 +446,18 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
           
           // Pagination info
           if (_total > 0)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              color: AppColors.surface,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Showing ${_skip + 1}-${(_skip + _limit).clamp(1, _total)} of $_total'),
+                  Text(
+                    'Showing ${_skip + 1}-${(_skip + _limit).clamp(1, _total)} of $_total',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                   Row(
                     children: [
                       IconButton(
@@ -422,38 +489,36 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
             ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           context.push('/students/add');
         },
-        child: const Icon(Icons.add),
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.add),
+        label: const Text('Add Student'),
       ),
     );
   }
 
-  Widget _buildStatusChip(StudentStatus status) {
-    Color color;
+  Widget _buildStatusBadge(StudentStatus status) {
+    StatusType type;
     String label;
 
     switch (status) {
       case StudentStatus.active:
-        color = Colors.green;
+        type = StatusType.present;
         label = 'Active';
         break;
       case StudentStatus.inactive:
-        color = Colors.red;
+        type = StatusType.absent;
         label = 'Inactive';
         break;
       case StudentStatus.graduated:
-        color = Colors.blue;
+        type = StatusType.info;
         label = 'Graduated';
         break;
     }
 
-    return Chip(
-      label: Text(label),
-      backgroundColor: color.withOpacity(0.1),
-      labelStyle: TextStyle(color: color, fontSize: 12),
-    );
+    return AppStatusBadge(label: label, type: type, isSmall: true);
   }
 }

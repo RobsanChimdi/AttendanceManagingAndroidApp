@@ -39,7 +39,7 @@ class AttendanceService {
   Future<Map<String, dynamic>> markQRAttendance(int sessionId, String qrToken) async {
     try {
       final response = await _dio.post(
-        '/attendance/sessions/$sessionId/qr-attendance',
+        '/attendance/sessions/$sessionId/qr',
         data: {'qr_token': qrToken},
       );
       return response.data;

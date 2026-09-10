@@ -77,3 +77,8 @@ class AuthState with _$AuthState {
   const factory AuthState.unauthenticated() = _Unauthenticated;
   const factory AuthState.error(String message) = _Error;
 }
+
+extension AuthStateX on AuthState {
+  bool get isLoading => maybeWhen(loading: () => true, orElse: () => false);
+  bool get isAuthenticated => maybeWhen(authenticated: (_) => true, orElse: () => false);
+}

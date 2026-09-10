@@ -1,13 +1,8 @@
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dio_client.dart';
+import '../network/api_client.dart';
 
 class DashboardService {
-  late final Dio _dio;
-
-  DashboardService() {
-    _dio = DioClient().dio;
-  }
+  final Dio _dio = ApiClient.dio;
 
   Future<Map<String, dynamic>> getDashboardStatistics() async {
     try {

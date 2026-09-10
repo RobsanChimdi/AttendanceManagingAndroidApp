@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from datetime import datetime, date
 from enum import Enum
@@ -43,16 +44,16 @@ class StudentResponse(BaseModel):
     id: int
     student_id: str
     first_name: str
-    middle_name: str
+    middle_name: Optional[str] = None
     last_name: str
-    gender: str
-    date_of_birth: date
-    grade: str
-    section: str
-    class_id: int
-    guardian_name: str
-    guardian_phone: str
-    guardian_email: str
+    gender: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    grade: Optional[str] = None
+    section: Optional[str] = None
+    class_id: Optional[int] = None
+    guardian_name: Optional[str] = None
+    guardian_phone: Optional[str] = None
+    guardian_email: Optional[str] = None
     status: StudentStatus
     created_at: datetime
     updated_at: datetime
