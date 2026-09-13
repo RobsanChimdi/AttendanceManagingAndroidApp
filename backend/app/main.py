@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -16,12 +17,26 @@ logger = logging.getLogger("main")
 limiter = Limiter(key_func=get_remote_address)
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup/shutdown events."""
+    logger.info("Starting up EDUTRACK AI Backend...")
+    # Verify database connection (non-blocking)
+    try:
+        check_db_connection()
+    except Exception as e:
+        logger.warning(f"Database connection check failed during startup: {e}")
+
+    yield  # Application runs here
+
+
 # Initialize FastAPI App
 app = FastAPI(
     title="EDUTRACK AI API",
     description="Smart Student Attendance Management System REST API",
     version="1.0.0",
-    debug=settings.DEBUG
+    debug=settings.DEBUG,
+    lifespan=lifespan
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -55,22 +70,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Starting up EDUTRACK AI Backend...")
-    # Verify database connection (non-blocking)
-    try:
-        check_db_connection()
-    except Exception as e:
-        logger.warning(f"Database connection check failed during startup: {e}")
-    
-    # Check/download facial recognition models (non-blocking)
-    try:
-        from app.facial_recognition.service import face_recognition_service
-        face_recognition_service.download_models_if_missing()
-    except Exception as e:
-        logger.warning(f"Facial recognition model setup failed during startup: {e}")
 
 @app.get("/")
 def read_root():
