@@ -17,8 +17,8 @@ class User with _$User {
     required String name,
     required String email,
     required UserRole role,
-    required DateTime createdAt,
-    required DateTime updatedAt,
+    @JsonKey(name: 'created_at') required DateTime createdAt,
+    @JsonKey(name: 'updated_at') required DateTime updatedAt,
   }) = _User;
 
   factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
@@ -38,9 +38,9 @@ class LoginRequest with _$LoginRequest {
 @freezed
 class LoginResponse with _$LoginResponse {
   const factory LoginResponse({
-    required String accessToken,
-    required String refreshToken,
-    required String tokenType,
+    @JsonKey(name: 'access_token') required String accessToken,
+    @JsonKey(name: 'refresh_token') required String refreshToken,
+    @JsonKey(name: 'token_type') required String tokenType,
     required User user,
   }) = _LoginResponse;
 
@@ -51,7 +51,7 @@ class LoginResponse with _$LoginResponse {
 @freezed
 class RefreshTokenRequest with _$RefreshTokenRequest {
   const factory RefreshTokenRequest({
-    required String refreshToken,
+    @JsonKey(name: 'refresh_token') required String refreshToken,
   }) = _RefreshTokenRequest;
 
   factory RefreshTokenRequest.fromJson(Map<String, dynamic> json) =>
@@ -61,8 +61,8 @@ class RefreshTokenRequest with _$RefreshTokenRequest {
 @freezed
 class RefreshTokenResponse with _$RefreshTokenResponse {
   const factory RefreshTokenResponse({
-    required String accessToken,
-    required String tokenType,
+    @JsonKey(name: 'access_token') required String accessToken,
+    @JsonKey(name: 'token_type') required String tokenType,
   }) = _RefreshTokenResponse;
 
   factory RefreshTokenResponse.fromJson(Map<String, dynamic> json) =>
@@ -80,5 +80,6 @@ class AuthState with _$AuthState {
 
 extension AuthStateX on AuthState {
   bool get isLoading => maybeWhen(loading: () => true, orElse: () => false);
-  bool get isAuthenticated => maybeWhen(authenticated: (_) => true, orElse: () => false);
+  bool get isAuthenticated =>
+      maybeWhen(authenticated: (_) => true, orElse: () => false);
 }

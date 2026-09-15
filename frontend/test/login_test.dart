@@ -2,14 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:edutrack_ai/main.dart';
+import 'package:edutrack_ai/models/auth_models.dart';
 
 void main() {
   testWidgets('Login screen renders correctly', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MyApp(),
-      ),
-    );
+    await tester.pumpWidget(const ProviderScope(child: MyApp()));
     await tester.pumpAndSettle();
 
     // Verify login screen elements are present
@@ -18,12 +15,10 @@ void main() {
     expect(find.text('Login'), findsOneWidget);
   });
 
-  testWidgets('Login with empty fields shows validation error', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MyApp(),
-      ),
-    );
+  testWidgets('Login with empty fields shows validation error', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ProviderScope(child: MyApp()));
     await tester.pumpAndSettle();
 
     // Tap login button without entering credentials
@@ -34,12 +29,10 @@ void main() {
     expect(find.text('Please enter your email'), findsOneWidget);
   });
 
-  testWidgets('Login with invalid email format shows error', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MyApp(),
-      ),
-    );
+  testWidgets('Login with invalid email format shows error', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const ProviderScope(child: MyApp()));
     await tester.pumpAndSettle();
 
     // Enter invalid email in first TextFormField
@@ -53,11 +46,7 @@ void main() {
   });
 
   testWidgets('Password field toggles visibility', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: MyApp(),
-      ),
-    );
+    await tester.pumpWidget(const ProviderScope(child: MyApp()));
     await tester.pumpAndSettle();
 
     // Tap eye icon to toggle password visibility
@@ -66,5 +55,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byIcon(Icons.visibility_off_outlined), findsOneWidget);
+  });
+
+  test('Login response parses backend snake_case JSON', () {
+    final json = {
+      'access_token': 'token123',
+      'refresh_token': 'refresh456',
+      'token_type': 'bearer',
+      'user': {
+        'id': 1,
+        'name': 'Test Teacher',
+        'email': 'teacher@example.com',
+        'role': 'TEACHER',
+        'created_at': '2025-01-01T00:00:00.000Z',
+        'updated_at': '2025-01-01T00:00:00.000Z',
+      },
+    };
+
+    final response = LoginResponse.fromJson(json);
+
+    expect(response.accessToken, 'token123');
+    expect(response.refreshToken, 'refresh456');
+    expect(response.user.role, UserRole.teacher);
   });
 }

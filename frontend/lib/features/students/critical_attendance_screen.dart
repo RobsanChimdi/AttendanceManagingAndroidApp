@@ -16,7 +16,7 @@ class _CriticalAttendanceScreenState extends ConsumerState<CriticalAttendanceScr
   String? _errorMessage;
   List<dynamic> _criticalStudents = [];
   int _total = 0;
-  double _threshold = 50.0;
+  final double _threshold = 50.0;
 
   @override
   void initState() {
@@ -213,7 +213,7 @@ class _CriticalAttendanceScreenState extends ConsumerState<CriticalAttendanceScr
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: statusColor),
                   ),

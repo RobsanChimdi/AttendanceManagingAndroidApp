@@ -11,7 +11,6 @@ import '../../widgets/app_card.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_loading.dart';
 import '../../services/student_service.dart';
-import '../../models/student_models.dart';
 
 class FaceEnrollmentScreen extends ConsumerStatefulWidget {
   final int studentId;
@@ -52,7 +51,6 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
   
   String _detectionMessage = '';
   bool _faceDetected = false;
-  bool _multipleFaces = false;
 
   @override
   void initState() {
@@ -252,7 +250,7 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
         // Student info header
         Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
-          color: AppColors.primary.withOpacity(0.05),
+          color: AppColors.primary.withValues(alpha: 0.05),
           child: Column(
             children: [
               Text(
@@ -339,8 +337,8 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
                           ),
                           decoration: BoxDecoration(
                             color: _faceDetected
-                                ? AppColors.success.withOpacity(0.9)
-                                : AppColors.error.withOpacity(0.9),
+                                ? AppColors.success.withValues(alpha: 0.9)
+                                : AppColors.error.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                           ),
                           child: Row(
@@ -377,7 +375,7 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
               if (_currentSample <= _totalSamples)
                 AppCard(
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                  backgroundColor: AppColors.info.withOpacity(0.1),
+                  backgroundColor: AppColors.info.withValues(alpha: 0.1),
                   isBordered: true,
                   child: Row(
                     children: [
@@ -414,9 +412,9 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -446,7 +444,7 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
         height: 350,
         decoration: BoxDecoration(
           border: Border.all(
-            color: _faceDetected ? AppColors.success : Colors.white.withOpacity(0.7),
+            color: _faceDetected ? AppColors.success : Colors.white.withValues(alpha: 0.7),
             width: 3,
           ),
           borderRadius: BorderRadius.circular(140),
@@ -479,7 +477,7 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
               child: Icon(
                 Icons.face,
                 size: 80,
-                color: _faceDetected ? AppColors.success : Colors.white.withOpacity(0.5),
+                color: _faceDetected ? AppColors.success : Colors.white.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -493,7 +491,7 @@ class _FaceEnrollmentScreenState extends ConsumerState<FaceEnrollmentScreen> {
       width: 20,
       height: 20,
       decoration: BoxDecoration(
-        color: _faceDetected ? AppColors.success : Colors.white.withOpacity(0.7),
+        color: _faceDetected ? AppColors.success : Colors.white.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(4),
       ),
     );

@@ -55,28 +55,28 @@ class AppStatusBadge extends StatelessWidget {
     switch (type) {
       case StatusType.present:
         return _StatusConfig(
-          backgroundColor: AppColors.success.withOpacity(0.1),
+          backgroundColor: AppColors.success.withValues(alpha: 0.1),
           textColor: AppColors.success,
           borderColor: AppColors.success,
           icon: Icons.check_circle,
         );
       case StatusType.absent:
         return _StatusConfig(
-          backgroundColor: AppColors.error.withOpacity(0.1),
+          backgroundColor: AppColors.error.withValues(alpha: 0.1),
           textColor: AppColors.error,
           borderColor: AppColors.error,
           icon: Icons.cancel,
         );
       case StatusType.warning:
         return _StatusConfig(
-          backgroundColor: AppColors.warning.withOpacity(0.1),
+          backgroundColor: AppColors.warning.withValues(alpha: 0.1),
           textColor: AppColors.warning,
           borderColor: AppColors.warning,
           icon: Icons.warning,
         );
       case StatusType.info:
         return _StatusConfig(
-          backgroundColor: AppColors.info.withOpacity(0.1),
+          backgroundColor: AppColors.info.withValues(alpha: 0.1),
           textColor: AppColors.info,
           borderColor: AppColors.info,
           icon: Icons.info,

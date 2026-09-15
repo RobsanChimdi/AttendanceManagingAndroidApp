@@ -95,7 +95,7 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
                 const Text('Grade'),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: _selectedGrade,
+                  initialValue: _selectedGrade,
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All Grades')),
                     ..._grades.map((grade) => DropdownMenuItem(
@@ -113,7 +113,7 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
                 const Text('Section'),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  value: _selectedSection,
+                  initialValue: _selectedSection,
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All Sections')),
                     ..._sections.map((section) => DropdownMenuItem(
@@ -131,7 +131,7 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
                 const Text('Status'),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<StudentStatus>(
-                  value: _selectedStatus,
+                  initialValue: _selectedStatus,
                   items: [
                     const DropdownMenuItem(value: null, child: Text('All Status')),
                     ...StudentStatus.values.map((status) => DropdownMenuItem(
@@ -187,78 +187,60 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            RadioListTile<String>(
-              title: const Text('First Name'),
-              value: 'first_name',
+            RadioGroup<String>(
               groupValue: _sortBy,
               onChanged: (value) {
-                setState(() {
-                  _sortBy = value;
-                });
-                Navigator.pop(context);
-                _loadStudents();
+                if (value != null) {
+                  setState(() => _sortBy = value);
+                  Navigator.pop(context);
+                  _loadStudents();
+                }
               },
-            ),
-            RadioListTile<String>(
-              title: const Text('Last Name'),
-              value: 'last_name',
-              groupValue: _sortBy,
-              onChanged: (value) {
-                setState(() {
-                  _sortBy = value;
-                });
-                Navigator.pop(context);
-                _loadStudents();
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text('Student ID'),
-              value: 'student_id',
-              groupValue: _sortBy,
-              onChanged: (value) {
-                setState(() {
-                  _sortBy = value;
-                });
-                Navigator.pop(context);
-                _loadStudents();
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text('Grade'),
-              value: 'grade',
-              groupValue: _sortBy,
-              onChanged: (value) {
-                setState(() {
-                  _sortBy = value;
-                });
-                Navigator.pop(context);
-                _loadStudents();
-              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<String>(
+                    title: const Text('First Name'),
+                    value: 'first_name',
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Last Name'),
+                    value: 'last_name',
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Student ID'),
+                    value: 'student_id',
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Grade'),
+                    value: 'grade',
+                  ),
+                ],
+              ),
             ),
             const Divider(),
-            RadioListTile<String>(
-              title: const Text('Ascending'),
-              value: 'asc',
+            RadioGroup<String>(
               groupValue: _sortOrder,
               onChanged: (value) {
-                setState(() {
-                  _sortOrder = value!;
-                });
-                Navigator.pop(context);
-                _loadStudents();
+                if (value != null) {
+                  setState(() => _sortOrder = value);
+                  Navigator.pop(context);
+                  _loadStudents();
+                }
               },
-            ),
-            RadioListTile<String>(
-              title: const Text('Descending'),
-              value: 'desc',
-              groupValue: _sortOrder,
-              onChanged: (value) {
-                setState(() {
-                  _sortOrder = value!;
-                });
-                Navigator.pop(context);
-                _loadStudents();
-              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  RadioListTile<String>(
+                    title: const Text('Ascending'),
+                    value: 'asc',
+                  ),
+                  RadioListTile<String>(
+                    title: const Text('Descending'),
+                    value: 'desc',
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -393,7 +375,7 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> {
                                 child: Row(
                                   children: [
                                     CircleAvatar(
-                                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                                       child: Text(
                                         '${student.firstName[0]}${student.lastName[0]}',
                                         style: TextStyle(

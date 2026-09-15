@@ -21,17 +21,17 @@ class StudentService {
       final queryParams = <String, dynamic>{
         'skip': skip,
         'limit': limit,
-        if (classId != null) 'class_id': classId,
-        if (grade != null) 'grade': grade,
-        if (section != null) 'section': section,
+        'class_id': ?classId,
+        'grade': ?grade,
+        'section': ?section,
         if (status != null) 'status': status.name.toUpperCase(),
-        if (search != null) 'search': search,
-        if (sortBy != null) 'sort_by': sortBy,
-        if (sortOrder != null) 'sort_order': sortOrder,
+        'search': ?search,
+        'sort_by': ?sortBy,
+        'sort_order': ?sortOrder,
       };
 
       final response = await _dio.get(
-        '/students',
+        '/students/',
         queryParameters: queryParams,
       );
 
@@ -39,7 +39,9 @@ class StudentService {
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
-        throw Exception('Connection timeout. Please check your internet connection.');
+        throw Exception(
+          'Connection timeout. Please check your internet connection.',
+        );
       } else if (e.type == DioExceptionType.connectionError) {
         throw Exception('No internet connection. Please check your network.');
       }
@@ -79,10 +81,7 @@ class StudentService {
 
   Future<Student> createStudent(StudentCreate student) async {
     try {
-      final response = await _dio.post(
-        '/students',
-        data: student.toJson(),
-      );
+      final response = await _dio.post('/students', data: student.toJson());
       return Student.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 400) {
@@ -138,10 +137,13 @@ class StudentService {
     }
   }
 
-  Future<Map<String, dynamic>> enrollFace(int studentId, List<File> imageFiles) async {
+  Future<Map<String, dynamic>> enrollFace(
+    int studentId,
+    List<File> imageFiles,
+  ) async {
     try {
       final formData = FormData();
-      
+
       for (int i = 0; i < imageFiles.length; i++) {
         final file = await MultipartFile.fromFile(
           imageFiles[i].path,
@@ -153,9 +155,7 @@ class StudentService {
       final response = await _dio.post(
         '/students/$studentId/face/enroll',
         data: formData,
-        options: Options(
-          contentType: 'multipart/form-data',
-        ),
+        options: Options(contentType: 'multipart/form-data'),
       );
 
       return response.data;
@@ -164,7 +164,9 @@ class StudentService {
         throw Exception('Student not found');
       }
       if (e.response?.statusCode == 400) {
-        throw Exception(e.response?.data['detail'] ?? 'Invalid enrollment data');
+        throw Exception(
+          e.response?.data['detail'] ?? 'Invalid enrollment data',
+        );
       }
       throw Exception('Failed to enroll face: ${e.message}');
     } catch (e) {
@@ -216,7 +218,9 @@ class StudentService {
 
   Future<Map<String, dynamic>> getAttendanceSummary(int studentId) async {
     try {
-      final response = await _dio.get('/students/$studentId/attendance-summary');
+      final response = await _dio.get(
+        '/students/$studentId/attendance-summary',
+      );
       return response.data;
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
@@ -236,15 +240,13 @@ class StudentService {
     try {
       final response = await _dio.get(
         '/students/critical-attendance',
-        queryParameters: {
-          'threshold': threshold,
-          'skip': skip,
-          'limit': limit,
-        },
+        queryParameters: {'threshold': threshold, 'skip': skip, 'limit': limit},
       );
       return response.data;
     } on DioException catch (e) {
-      throw Exception('Failed to get critical attendance students: ${e.message}');
+      throw Exception(
+        'Failed to get critical attendance students: ${e.message}',
+      );
     } catch (e) {
       throw Exception('Failed to get critical attendance students: $e');
     }

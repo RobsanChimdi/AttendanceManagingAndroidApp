@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../services/analytics_service.dart';
@@ -294,7 +293,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             dotData: FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
             ),
           ),
         ],
@@ -568,7 +567,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             runSpacing: AppSpacing.sm,
             children: byClass.map((cls) => Chip(
               label: Text('${cls['class_name']}: ${cls['count']}', style: AppTextStyles.bodySmall),
-              backgroundColor: AppColors.warning.withOpacity(0.1),
+              backgroundColor: AppColors.warning.withValues(alpha: 0.1),
             )).toList(),
           ),
         ],
@@ -587,7 +586,7 @@ class _AnalyticsScreenState extends ConsumerState<AnalyticsScreen> {
             runSpacing: AppSpacing.sm,
             children: byGrade.map((grade) => Chip(
               label: Text('Grade ${grade['grade']}: ${grade['count']}', style: AppTextStyles.bodySmall),
-              backgroundColor: AppColors.secondary.withOpacity(0.1),
+              backgroundColor: AppColors.secondary.withValues(alpha: 0.1),
             )).toList(),
           ),
         ],

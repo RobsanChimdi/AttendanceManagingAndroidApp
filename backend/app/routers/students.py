@@ -32,7 +32,7 @@ def list_students(
     status: Optional[StudentStatus] = Query(None),
     search: Optional[str] = Query(None),
     sort_by: Optional[str] = Query(None, description="Field to sort by: first_name, last_name, student_id, grade, section, status"),
-    sort_order: Optional[str] = Query("asc", regex="^(asc|desc)$"),
+    sort_order: Optional[str] = Query("asc", pattern="^(asc|desc)$"),
     db: Session = Depends(get_db),
     current_user = Depends(require_admin_or_teacher)
 ):
@@ -94,7 +94,7 @@ def search_students(
     student_service = StudentService(db)
     return student_service.search_students(name, skip=skip, limit=limit)
 
-@router.get("/{student_id}", response_model=StudentResponse)
+@router.get("/{student_id:int}", response_model=StudentResponse)
 @limiter.limit("60/minute")
 def get_student(request: Request, student_id: int, db: Session = Depends(get_db), current_user = Depends(require_admin_or_teacher)):
     """

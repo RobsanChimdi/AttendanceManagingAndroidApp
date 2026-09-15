@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../../theme/app_colors.dart';
@@ -15,14 +13,7 @@ import '../../widgets/app_loading.dart';
 import '../../widgets/app_empty_state.dart';
 import '../../services/report_service.dart';
 
-enum ReportType {
-  daily,
-  weekly,
-  monthly,
-  student,
-  class_,
-  critical,
-}
+enum ReportType { daily, weekly, monthly, student, class_, critical }
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -33,15 +24,15 @@ class ReportsScreen extends ConsumerStatefulWidget {
 
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   final ReportService _reportService = ReportService();
-  final RefreshController _refreshController = RefreshController(initialRefresh: false);
-  
+
   bool _isLoading = false;
   String? _errorMessage;
-  
+
   ReportType _selectedReportType = ReportType.daily;
-  
+
   // Filters
   DateTime? _selectedDate;
+
   DateTime? _dateFrom;
   DateTime? _dateTo;
   String? _selectedGrade;
@@ -50,20 +41,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   int? _selectedStudentId;
   String? _selectedStatus;
   String? _selectedMethod;
-  
+
   // Report data
-  Map<String, dynamic>? _reportData;
   List<dynamic> _records = [];
   int _total = 0;
   int _currentPage = 0;
-  int _pageSize = 20;
+  final int _pageSize = 20;
   Map<String, dynamic>? _summary;
-
-  @override
-  void dispose() {
-    _refreshController.dispose();
-    super.dispose();
-  }
 
   Future<void> _loadReport() async {
     setState(() {
@@ -73,83 +57,109 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
     try {
       Map<String, dynamic> data;
-      
-      switch (_selectedReportType) {
-        case ReportType.daily:
-          if (_selectedDate == null) {
-            _selectedDate = DateTime.now();
-          }
-          data = await _reportService.getDailyAttendanceReport(
-            date: _selectedDate!,
-            grade: _selectedGrade,
-            classId: _selectedClassId,
-            section: _selectedSection,
-            skip: _currentPage * _pageSize,
-            limit: _pageSize,
-          );
-          break;
-        case ReportType.weekly:
-          final weekStart = _dateFrom ?? DateTime.now();
-          data = await _reportService.getWeeklyAttendanceReport(
-            weekStart: weekStart,
-            grade: _selectedGrade,
-            classId: _selectedClassId,
-            section: _selectedSection,
-            skip: _currentPage * _pageSize,
-            limit: _pageSize,
-          );
-          break;
-        case ReportType.monthly:
-          final now = _dateFrom ?? DateTime.now();
-          data = await _reportService.getMonthlyAttendanceReport(
-            year: now.year,
-            month: now.month,
-            grade: _selectedGrade,
-            classId: _selectedClassId,
-            section: _selectedSection,
-            skip: _currentPage * _pageSize,
-            limit: _pageSize,
-          );
-          break;
-        case ReportType.student:
-          if (_selectedStudentId == null) {
-            throw Exception('Please select a student');
-          }
-          data = await _reportService.getStudentAttendanceReport(
-            studentId: _selectedStudentId!,
-            dateFrom: _dateFrom,
-            dateTo: _dateTo,
-            skip: _currentPage * _pageSize,
-            limit: _pageSize,
-          );
-          break;
-        case ReportType.class_:
-          if (_selectedClassId == null) {
-            throw Exception('Please select a class');
-          }
-          data = await _reportService.getClassAttendanceReport(
-            classId: _selectedClassId!,
-            dateFrom: _dateFrom,
-            dateTo: _dateTo,
-            skip: _currentPage * _pageSize,
-            limit: _pageSize,
-          );
-          break;
-        case ReportType.critical:
-          data = await _reportService.getCriticalAttendanceReport(
-            threshold: 50.0,
-            grade: _selectedGrade,
-            classId: _selectedClassId,
-            section: _selectedSection,
-            skip: _currentPage * _pageSize,
-            limit: _pageSize,
-          );
-          break;
+
+      if (_selectedReportType != ReportType.critical) {
+        DateTime? date;
+        DateTime? dateFrom = _dateFrom;
+        DateTime? dateTo = _dateTo;
+        if (_selectedReportType == ReportType.daily) {
+          date = _selectedDate ?? DateTime.now();
+        } else if (_selectedReportType == ReportType.weekly) {
+          dateFrom ??= DateTime.now();
+          dateTo ??= dateFrom.add(const Duration(days: 6));
+        } else if (_selectedReportType == ReportType.monthly) {
+          final month = _dateFrom ?? DateTime.now();
+          dateFrom = DateTime(month.year, month.month, 1);
+          dateTo = DateTime(month.year, month.month + 1, 0);
+        }
+        data = await _reportService.getFilteredAttendanceReport(
+          date: date,
+          dateFrom: dateFrom,
+          dateTo: dateTo,
+          grade: _selectedGrade,
+          classId: _selectedClassId,
+          section: _selectedSection,
+          studentId: _selectedStudentId,
+          status: _selectedStatus,
+          method: _selectedMethod,
+          skip: _currentPage * _pageSize,
+          limit: _pageSize,
+        );
+      } else {
+        switch (_selectedReportType) {
+          case ReportType.daily:
+            _selectedDate ??= DateTime.now();
+            data = await _reportService.getDailyAttendanceReport(
+              date: _selectedDate!,
+              grade: _selectedGrade,
+              classId: _selectedClassId,
+              section: _selectedSection,
+              skip: _currentPage * _pageSize,
+              limit: _pageSize,
+            );
+            break;
+          case ReportType.weekly:
+            final weekStart = _dateFrom ?? DateTime.now();
+            data = await _reportService.getWeeklyAttendanceReport(
+              weekStart: weekStart,
+              grade: _selectedGrade,
+              classId: _selectedClassId,
+              section: _selectedSection,
+              skip: _currentPage * _pageSize,
+              limit: _pageSize,
+            );
+            break;
+          case ReportType.monthly:
+            final now = _dateFrom ?? DateTime.now();
+            data = await _reportService.getMonthlyAttendanceReport(
+              year: now.year,
+              month: now.month,
+              grade: _selectedGrade,
+              classId: _selectedClassId,
+              section: _selectedSection,
+              skip: _currentPage * _pageSize,
+              limit: _pageSize,
+            );
+            break;
+          case ReportType.student:
+            if (_selectedStudentId == null) {
+              throw Exception('Please select a student');
+            }
+            data = await _reportService.getStudentAttendanceReport(
+              studentId: _selectedStudentId!,
+              dateFrom: _dateFrom,
+              dateTo: _dateTo,
+              skip: _currentPage * _pageSize,
+              limit: _pageSize,
+            );
+            break;
+          case ReportType.class_:
+            if (_selectedClassId == null) {
+              throw Exception('Please select a class');
+            }
+            data = await _reportService.getClassAttendanceReport(
+              classId: _selectedClassId!,
+              dateFrom: _dateFrom,
+              dateTo: _dateTo,
+              skip: _currentPage * _pageSize,
+              limit: _pageSize,
+            );
+            break;
+          case ReportType.critical:
+            data = await _reportService.getCriticalAttendanceReport(
+              threshold: 50.0,
+              grade: _selectedGrade,
+              classId: _selectedClassId,
+              section: _selectedSection,
+              skip: _currentPage * _pageSize,
+              limit: _pageSize,
+            );
+            break;
+        }
       }
 
       if (mounted) {
         setState(() {
-          _reportData = data;
           _records = data['records'] ?? [];
           _total = data['total'] ?? 0;
           _summary = data['summary'];
@@ -166,44 +176,42 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     }
   }
 
-  void _onRefresh() async {
-    _currentPage = 0;
-    await _loadReport();
-    _refreshController.refreshCompleted();
-  }
-
   Future<void> _exportCSV() async {
     try {
       String csvContent;
-      
-      if (_selectedReportType == ReportType.daily) {
-        csvContent = await _reportService.exportDailyAttendanceCSV(
-          date: _selectedDate ?? DateTime.now(),
+
+      if (_selectedReportType != ReportType.critical) {
+        DateTime? date;
+        DateTime? dateFrom = _dateFrom;
+        DateTime? dateTo = _dateTo;
+        if (_selectedReportType == ReportType.daily) {
+          date = _selectedDate ?? DateTime.now();
+        } else if (_selectedReportType == ReportType.weekly) {
+          dateFrom ??= DateTime.now();
+          dateTo ??= dateFrom.add(const Duration(days: 6));
+        } else if (_selectedReportType == ReportType.monthly) {
+          final month = _dateFrom ?? DateTime.now();
+          dateFrom = DateTime(month.year, month.month, 1);
+          dateTo = DateTime(month.year, month.month + 1, 0);
+        }
+        csvContent = await _reportService.exportFilteredAttendanceCSV(
+          date: date,
+          dateFrom: dateFrom,
+          dateTo: dateTo,
           grade: _selectedGrade,
           classId: _selectedClassId,
           section: _selectedSection,
+          studentId: _selectedStudentId,
+          status: _selectedStatus,
+          method: _selectedMethod,
         );
-      } else if (_selectedReportType == ReportType.critical) {
+      } else {
         csvContent = await _reportService.exportCriticalAttendanceCSV(
           threshold: 50.0,
           grade: _selectedGrade,
           classId: _selectedClassId,
           section: _selectedSection,
         );
-      } else {
-        // Generate CSV locally for other report types
-        final headers = ['ID', 'Student', 'Class', 'Status', 'Date'];
-        final csvRows = <List<dynamic>>[headers];
-        for (final rec in _records) {
-          csvRows.add([
-            rec['student_id'] ?? rec['roll_number'] ?? '',
-            rec['student_name'] ?? rec['full_name'] ?? '',
-            '${rec['grade'] ?? ''} ${rec['section'] ?? ''}'.trim(),
-            rec['status'] ?? '',
-            rec['check_in_time'] ?? rec['marked_at'] ?? '',
-          ]);
-        }
-        csvContent = const ListToCsvConverter().convert(csvRows);
       }
 
       // Save to file and share
@@ -211,13 +219,13 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final file = File('${directory.path}/report_$timestamp.csv');
       await file.writeAsString(csvContent);
-      
+
       await Share.shareXFiles([XFile(file.path)], text: 'Attendance Report');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to export CSV: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to export CSV: $e')));
       }
     }
   }
@@ -225,23 +233,37 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Future<void> _exportPDF() async {
     try {
       List<int> pdfBytes;
-      if (_selectedReportType == ReportType.daily) {
-        pdfBytes = await _reportService.exportDailyAttendancePDF(
-          date: _selectedDate ?? DateTime.now(),
+      if (_selectedReportType != ReportType.critical) {
+        DateTime? date;
+        DateTime? dateFrom = _dateFrom;
+        DateTime? dateTo = _dateTo;
+        if (_selectedReportType == ReportType.daily) {
+          date = _selectedDate ?? DateTime.now();
+        } else if (_selectedReportType == ReportType.weekly) {
+          dateFrom ??= DateTime.now();
+          dateTo ??= dateFrom.add(const Duration(days: 6));
+        } else if (_selectedReportType == ReportType.monthly) {
+          final month = _dateFrom ?? DateTime.now();
+          dateFrom = DateTime(month.year, month.month, 1);
+          dateTo = DateTime(month.year, month.month + 1, 0);
+        }
+        pdfBytes = await _reportService.exportFilteredAttendancePDF(
+          date: date,
+          dateFrom: dateFrom,
+          dateTo: dateTo,
           grade: _selectedGrade,
           classId: _selectedClassId,
           section: _selectedSection,
+          studentId: _selectedStudentId,
+          status: _selectedStatus,
+          method: _selectedMethod,
         );
-      } else if (_selectedReportType == ReportType.critical) {
+      } else {
         pdfBytes = await _reportService.exportCriticalAttendancePDF(
           threshold: 50.0,
           grade: _selectedGrade,
           classId: _selectedClassId,
           section: _selectedSection,
-        );
-      } else {
-        pdfBytes = await _reportService.exportDailyAttendancePDF(
-          date: DateTime.now(),
         );
       }
 
@@ -250,16 +272,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
       final file = File('${directory.path}/report_$timestamp.pdf');
       await file.writeAsBytes(pdfBytes);
 
-      await Share.shareXFiles([XFile(file.path)], text: 'Attendance PDF Report');
+      await Share.shareXFiles([
+        XFile(file.path),
+      ], text: 'Attendance PDF Report');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to export PDF: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to export PDF: $e')));
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -295,16 +318,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           // Filters
           _buildFilters(),
           const Divider(height: 1, color: AppColors.divider),
-          
+
           // Report content
           Expanded(
             child: _isLoading
                 ? const AppLoading(message: 'Loading report...')
                 : _errorMessage != null
-                    ? _buildErrorView()
-                    : _records.isEmpty
-                        ? _buildEmptyView()
-                        : _buildReportContent(),
+                ? _buildErrorView()
+                : _records.isEmpty
+                ? _buildEmptyView()
+                : _buildReportContent(),
           ),
         ],
       ),
@@ -345,9 +368,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         _loadReport();
                       }
                     },
-                    selectedColor: AppColors.primary.withOpacity(0.1),
+                    selectedColor: AppColors.primary.withValues(alpha: 0.1),
                     labelStyle: AppTextStyles.labelMedium.copyWith(
-                      color: _selectedReportType == type ? AppColors.primary : AppColors.textSecondary,
+                      color: _selectedReportType == type
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
                     ),
                   ),
                 );
@@ -355,58 +380,46 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          
+
           // Date filters
           if (_selectedReportType == ReportType.daily) ...[
-            _buildDateFilter(
-              'Date',
-              _selectedDate,
-              (date) {
-                setState(() {
-                  _selectedDate = date;
-                });
-                _loadReport();
-              },
-            ),
+            _buildDateFilter('Date', _selectedDate, (date) {
+              setState(() {
+                _selectedDate = date;
+              });
+              _loadReport();
+            }),
           ],
-          
-          if (_selectedReportType == ReportType.weekly || 
+
+          if (_selectedReportType == ReportType.weekly ||
               _selectedReportType == ReportType.monthly ||
               _selectedReportType == ReportType.student ||
               _selectedReportType == ReportType.class_) ...[
             Row(
               children: [
                 Expanded(
-                  child: _buildDateFilter(
-                    'From',
-                    _dateFrom,
-                    (date) {
-                      setState(() {
-                        _dateFrom = date;
-                      });
-                      _loadReport();
-                    },
-                  ),
+                  child: _buildDateFilter('From', _dateFrom, (date) {
+                    setState(() {
+                      _dateFrom = date;
+                    });
+                    _loadReport();
+                  }),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: _buildDateFilter(
-                    'To',
-                    _dateTo,
-                    (date) {
-                      setState(() {
-                        _dateTo = date;
-                      });
-                      _loadReport();
-                    },
-                  ),
+                  child: _buildDateFilter('To', _dateTo, (date) {
+                    setState(() {
+                      _dateTo = date;
+                    });
+                    _loadReport();
+                  }),
                 ),
               ],
             ),
           ],
-          
+
           const SizedBox(height: AppSpacing.lg),
-          
+
           // Additional filters
           Wrap(
             spacing: AppSpacing.sm,
@@ -414,7 +427,21 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             children: [
               _buildDropdownFilter(
                 'Grade',
-                ['All', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'],
+                [
+                  'All',
+                  '1',
+                  '2',
+                  '3',
+                  '4',
+                  '5',
+                  '6',
+                  '7',
+                  '8',
+                  '9',
+                  '10',
+                  '11',
+                  '12',
+                ],
                 _selectedGrade,
                 (value) {
                   setState(() {
@@ -447,7 +474,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ),
             ],
           ),
-          
+
           // Summary if available
           if (_summary != null) ...[
             const SizedBox(height: AppSpacing.lg),
@@ -476,21 +503,30 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
         decoration: BoxDecoration(
           border: Border.all(color: AppColors.border),
           borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today, size: 16, color: AppColors.textSecondary),
+            Icon(
+              Icons.calendar_today,
+              size: 16,
+              color: AppColors.textSecondary,
+            ),
             const SizedBox(width: AppSpacing.sm),
             Text(
               selectedDate != null
                   ? DateFormat('yyyy-MM-dd').format(selectedDate)
                   : label,
               style: AppTextStyles.bodyMedium.copyWith(
-                color: selectedDate != null ? AppColors.textPrimary : AppColors.textHint,
+                color: selectedDate != null
+                    ? AppColors.textPrimary
+                    : AppColors.textHint,
               ),
             ),
           ],
@@ -524,10 +560,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           style: AppTextStyles.bodyMedium.copyWith(
             color: AppColors.textPrimary,
           ),
-          icon: Icon(
-            Icons.arrow_drop_down,
-            color: AppColors.textSecondary,
-          ),
+          icon: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
           dropdownColor: AppColors.surface,
         ),
       ),
@@ -537,20 +570,40 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Widget _buildSummaryCard() {
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.lg),
-      backgroundColor: AppColors.primary.withOpacity(0.05),
+      backgroundColor: AppColors.primary.withValues(alpha: 0.05),
       isBordered: true,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem('Total', _summary?['total_records'] ?? 0, Icons.description, AppColors.primary),
-          _buildSummaryItem('Present', _summary?['present_count'] ?? 0, Icons.check_circle, AppColors.success),
-          _buildSummaryItem('Absent', _summary?['absent_count'] ?? 0, Icons.cancel, AppColors.error),
+          _buildSummaryItem(
+            'Total',
+            _summary?['total_records'] ?? 0,
+            Icons.description,
+            AppColors.primary,
+          ),
+          _buildSummaryItem(
+            'Present',
+            _summary?['present_count'] ?? 0,
+            Icons.check_circle,
+            AppColors.success,
+          ),
+          _buildSummaryItem(
+            'Absent',
+            _summary?['absent_count'] ?? 0,
+            Icons.cancel,
+            AppColors.error,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryItem(String label, dynamic value, IconData icon, Color color) {
+  Widget _buildSummaryItem(
+    String label,
+    dynamic value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Icon(icon, color: color, size: 20),
@@ -659,7 +712,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             ],
           ),
         ),
-        
+
         // Table
         Expanded(
           child: SingleChildScrollView(
@@ -669,7 +722,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
-                  headingRowColor: MaterialStateProperty.all(AppColors.surfaceVariant),
+                  headingRowColor: WidgetStateProperty.all(
+                    AppColors.surfaceVariant,
+                  ),
                   columns: _buildTableColumns(),
                   rows: _records.map((record) {
                     return _buildTableRow(record);
@@ -677,7 +732,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   columnSpacing: AppSpacing.md,
                   horizontalMargin: AppSpacing.lg,
                   headingRowHeight: 56,
-                  dataRowHeight: 56,
+                  dataRowMinHeight: 56,
+                  dataRowMaxHeight: 56,
                 ),
               ),
             ),
@@ -746,7 +802,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         ),
       ];
     }
-    
+
     return [
       DataColumn(
         label: Text(
@@ -818,22 +874,21 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     if (_selectedReportType == ReportType.critical) {
       return DataRow(
         cells: [
-          DataCell(Text(
-            record['student_name'] ?? '',
-            style: AppTextStyles.bodyMedium,
-          )),
-          DataCell(Text(
-            record['student_id_str'] ?? '',
-            style: AppTextStyles.bodyMedium,
-          )),
-          DataCell(Text(
-            record['grade'] ?? '',
-            style: AppTextStyles.bodyMedium,
-          )),
-          DataCell(Text(
-            record['section'] ?? '',
-            style: AppTextStyles.bodyMedium,
-          )),
+          DataCell(
+            Text(record['student_name'] ?? '', style: AppTextStyles.bodyMedium),
+          ),
+          DataCell(
+            Text(
+              record['student_id_str'] ?? '',
+              style: AppTextStyles.bodyMedium,
+            ),
+          ),
+          DataCell(
+            Text(record['grade'] ?? '', style: AppTextStyles.bodyMedium),
+          ),
+          DataCell(
+            Text(record['section'] ?? '', style: AppTextStyles.bodyMedium),
+          ),
           DataCell(
             Text(
               '${record['attendance_percentage']?.toStringAsFixed(1) ?? '0'}%',
@@ -845,60 +900,61 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               ),
             ),
           ),
-          DataCell(Text(
-            record['guardian_name'] ?? '',
-            style: AppTextStyles.bodyMedium,
-          )),
+          DataCell(
+            Text(
+              record['guardian_name'] ?? '',
+              style: AppTextStyles.bodyMedium,
+            ),
+          ),
         ],
       );
     }
-    
+
     return DataRow(
       cells: [
-        DataCell(Text(
-          _formatDate(record['date']),
-          style: AppTextStyles.bodyMedium,
-        )),
-        DataCell(Text(
-          record['student_name'] ?? '',
-          style: AppTextStyles.bodyMedium,
-        )),
-        DataCell(Text(
-          record['student_id_str'] ?? '',
-          style: AppTextStyles.bodyMedium,
-        )),
-        DataCell(Text(
-          record['class_name'] ?? '',
-          style: AppTextStyles.bodyMedium,
-        )),
+        DataCell(
+          Text(_formatDate(record['date']), style: AppTextStyles.bodyMedium),
+        ),
+        DataCell(
+          Text(record['student_name'] ?? '', style: AppTextStyles.bodyMedium),
+        ),
+        DataCell(
+          Text(record['student_id_str'] ?? '', style: AppTextStyles.bodyMedium),
+        ),
+        DataCell(
+          Text(record['class_name'] ?? '', style: AppTextStyles.bodyMedium),
+        ),
         DataCell(
           Row(
             children: [
               Icon(
-                record['status'] == 'PRESENT' ? Icons.check_circle : Icons.cancel,
+                record['status'] == 'PRESENT'
+                    ? Icons.check_circle
+                    : Icons.cancel,
                 size: 16,
-                color: record['status'] == 'PRESENT' ? AppColors.success : AppColors.error,
+                color: record['status'] == 'PRESENT'
+                    ? AppColors.success
+                    : AppColors.error,
               ),
               const SizedBox(width: AppSpacing.xs),
-              Text(
-                record['status'] ?? '',
-                style: AppTextStyles.bodyMedium,
-              ),
+              Text(record['status'] ?? '', style: AppTextStyles.bodyMedium),
             ],
           ),
         ),
-        DataCell(Text(
-          record['method'] ?? '',
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textSecondary,
+        DataCell(
+          Text(
+            record['method'] ?? '',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
-        )),
-        DataCell(Text(
-          _formatTime(record['recognized_at']),
-          style: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textHint,
+        ),
+        DataCell(
+          Text(
+            _formatTime(record['recognized_at']),
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textHint),
           ),
-        )),
+        ),
       ],
     );
   }

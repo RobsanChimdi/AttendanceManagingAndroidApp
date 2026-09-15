@@ -263,7 +263,7 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
               const SizedBox(height: 16),
               
               DropdownButtonFormField<String>(
-                value: _selectedGender,
+                initialValue: _selectedGender,
                 decoration: const InputDecoration(
                   labelText: 'Gender',
                   border: OutlineInputBorder(),
@@ -309,7 +309,7 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
               const SizedBox(height: 16),
               
               DropdownButtonFormField<String>(
-                value: _selectedGrade,
+                initialValue: _selectedGrade,
                 decoration: const InputDecoration(
                   labelText: 'Grade',
                   border: OutlineInputBorder(),
@@ -330,7 +330,7 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
               const SizedBox(height: 16),
               
               DropdownButtonFormField<String>(
-                value: _selectedSection,
+                initialValue: _selectedSection,
                 decoration: const InputDecoration(
                   labelText: 'Section',
                   border: OutlineInputBorder(),
@@ -435,7 +435,7 @@ class _EditStudentScreenState extends ConsumerState<EditStudentScreen> {
               const SizedBox(height: 16),
               
               DropdownButtonFormField<StudentStatus>(
-                value: _selectedStatus,
+                initialValue: _selectedStatus,
                 decoration: const InputDecoration(
                   labelText: 'Student Status',
                   border: OutlineInputBorder(),

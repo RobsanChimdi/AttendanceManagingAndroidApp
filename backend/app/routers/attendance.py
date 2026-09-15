@@ -55,7 +55,8 @@ def create_session(
 @router.get("/sessions/{session_id}", response_model=AttendanceSessionResponse)
 def get_session(
     session_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user = Depends(require_admin_or_teacher)
 ):
     """
     Get attendance session by ID.

@@ -19,8 +19,6 @@ class _StartAttendanceScreenState extends ConsumerState<StartAttendanceScreen> {
   final _formKey = GlobalKey<FormState>();
   
   int? _selectedClassId;
-  String? _selectedGrade;
-  String? _selectedSection;
   DateTime? _selectedDate = DateTime.now();
   
   bool _isLoading = false;
@@ -28,8 +26,6 @@ class _StartAttendanceScreenState extends ConsumerState<StartAttendanceScreen> {
   String? _errorMessage;
   
   List<dynamic> _classes = [];
-  List<String> _grades = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
-  List<String> _sections = ['A', 'B', 'C', 'D', 'E'];
 
   @override
   void initState() {
@@ -131,7 +127,7 @@ class _StartAttendanceScreenState extends ConsumerState<StartAttendanceScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
-                      value: _selectedClassId,
+                      initialValue: _selectedClassId,
                       decoration: const InputDecoration(
                         labelText: 'Class *',
                         border: OutlineInputBorder(),

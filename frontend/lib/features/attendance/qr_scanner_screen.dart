@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../services/attendance_service.dart';
@@ -234,7 +233,7 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
               _buildScanOverlay(),
               if (_isLoading)
                 Container(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   child: const AppLoading(message: 'Processing...'),
                 ),
             ],
@@ -249,9 +248,9 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
                 Container(
                   padding: const EdgeInsets.all(AppSpacing.md),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -274,7 +273,7 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                     ),
                     child: Text(
@@ -312,7 +311,7 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
         height: 280,
         decoration: BoxDecoration(
           border: Border.all(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             width: 3,
           ),
           borderRadius: BorderRadius.circular(12),
@@ -327,7 +326,7 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
               child: Icon(
                 Icons.qr_code_scanner,
                 size: 80,
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -341,7 +340,7 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
       width: 20,
       height: 20,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.7),
+        color: Colors.white.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(4),
       ),
     );

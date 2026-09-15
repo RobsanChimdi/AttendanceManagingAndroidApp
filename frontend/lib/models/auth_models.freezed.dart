@@ -25,7 +25,9 @@ mixin _$User {
   String get name => throw _privateConstructorUsedError;
   String get email => throw _privateConstructorUsedError;
   UserRole get role => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
   DateTime get createdAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'updated_at')
   DateTime get updatedAt => throw _privateConstructorUsedError;
 
   /// Serializes this User to a JSON map.
@@ -47,8 +49,8 @@ abstract class $UserCopyWith<$Res> {
     String name,
     String email,
     UserRole role,
-    DateTime createdAt,
-    DateTime updatedAt,
+    @JsonKey(name: 'created_at') DateTime createdAt,
+    @JsonKey(name: 'updated_at') DateTime updatedAt,
   });
 }
 
@@ -119,8 +121,8 @@ abstract class _$$UserImplCopyWith<$Res> implements $UserCopyWith<$Res> {
     String name,
     String email,
     UserRole role,
-    DateTime createdAt,
-    DateTime updatedAt,
+    @JsonKey(name: 'created_at') DateTime createdAt,
+    @JsonKey(name: 'updated_at') DateTime updatedAt,
   });
 }
 
@@ -182,8 +184,8 @@ class _$UserImpl implements _User {
     required this.name,
     required this.email,
     required this.role,
-    required this.createdAt,
-    required this.updatedAt,
+    @JsonKey(name: 'created_at') required this.createdAt,
+    @JsonKey(name: 'updated_at') required this.updatedAt,
   });
 
   factory _$UserImpl.fromJson(Map<String, dynamic> json) =>
@@ -198,8 +200,10 @@ class _$UserImpl implements _User {
   @override
   final UserRole role;
   @override
+  @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @override
+  @JsonKey(name: 'updated_at')
   final DateTime updatedAt;
 
   @override
@@ -247,8 +251,8 @@ abstract class _User implements User {
     required final String name,
     required final String email,
     required final UserRole role,
-    required final DateTime createdAt,
-    required final DateTime updatedAt,
+    @JsonKey(name: 'created_at') required final DateTime createdAt,
+    @JsonKey(name: 'updated_at') required final DateTime updatedAt,
   }) = _$UserImpl;
 
   factory _User.fromJson(Map<String, dynamic> json) = _$UserImpl.fromJson;
@@ -262,8 +266,10 @@ abstract class _User implements User {
   @override
   UserRole get role;
   @override
+  @JsonKey(name: 'created_at')
   DateTime get createdAt;
   @override
+  @JsonKey(name: 'updated_at')
   DateTime get updatedAt;
 
   /// Create a copy of User
@@ -449,8 +455,11 @@ LoginResponse _$LoginResponseFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$LoginResponse {
+  @JsonKey(name: 'access_token')
   String get accessToken => throw _privateConstructorUsedError;
+  @JsonKey(name: 'refresh_token')
   String get refreshToken => throw _privateConstructorUsedError;
+  @JsonKey(name: 'token_type')
   String get tokenType => throw _privateConstructorUsedError;
   User get user => throw _privateConstructorUsedError;
 
@@ -472,9 +481,9 @@ abstract class $LoginResponseCopyWith<$Res> {
   ) = _$LoginResponseCopyWithImpl<$Res, LoginResponse>;
   @useResult
   $Res call({
-    String accessToken,
-    String refreshToken,
-    String tokenType,
+    @JsonKey(name: 'access_token') String accessToken,
+    @JsonKey(name: 'refresh_token') String refreshToken,
+    @JsonKey(name: 'token_type') String tokenType,
     User user,
   });
 
@@ -545,9 +554,9 @@ abstract class _$$LoginResponseImplCopyWith<$Res>
   @override
   @useResult
   $Res call({
-    String accessToken,
-    String refreshToken,
-    String tokenType,
+    @JsonKey(name: 'access_token') String accessToken,
+    @JsonKey(name: 'refresh_token') String refreshToken,
+    @JsonKey(name: 'token_type') String tokenType,
     User user,
   });
 
@@ -601,9 +610,9 @@ class __$$LoginResponseImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$LoginResponseImpl implements _LoginResponse {
   const _$LoginResponseImpl({
-    required this.accessToken,
-    required this.refreshToken,
-    required this.tokenType,
+    @JsonKey(name: 'access_token') required this.accessToken,
+    @JsonKey(name: 'refresh_token') required this.refreshToken,
+    @JsonKey(name: 'token_type') required this.tokenType,
     required this.user,
   });
 
@@ -611,10 +620,13 @@ class _$LoginResponseImpl implements _LoginResponse {
       _$$LoginResponseImplFromJson(json);
 
   @override
+  @JsonKey(name: 'access_token')
   final String accessToken;
   @override
+  @JsonKey(name: 'refresh_token')
   final String refreshToken;
   @override
+  @JsonKey(name: 'token_type')
   final String tokenType;
   @override
   final User user;
@@ -659,9 +671,9 @@ class _$LoginResponseImpl implements _LoginResponse {
 
 abstract class _LoginResponse implements LoginResponse {
   const factory _LoginResponse({
-    required final String accessToken,
-    required final String refreshToken,
-    required final String tokenType,
+    @JsonKey(name: 'access_token') required final String accessToken,
+    @JsonKey(name: 'refresh_token') required final String refreshToken,
+    @JsonKey(name: 'token_type') required final String tokenType,
     required final User user,
   }) = _$LoginResponseImpl;
 
@@ -669,10 +681,13 @@ abstract class _LoginResponse implements LoginResponse {
       _$LoginResponseImpl.fromJson;
 
   @override
+  @JsonKey(name: 'access_token')
   String get accessToken;
   @override
+  @JsonKey(name: 'refresh_token')
   String get refreshToken;
   @override
+  @JsonKey(name: 'token_type')
   String get tokenType;
   @override
   User get user;
@@ -691,6 +706,7 @@ RefreshTokenRequest _$RefreshTokenRequestFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$RefreshTokenRequest {
+  @JsonKey(name: 'refresh_token')
   String get refreshToken => throw _privateConstructorUsedError;
 
   /// Serializes this RefreshTokenRequest to a JSON map.
@@ -710,7 +726,7 @@ abstract class $RefreshTokenRequestCopyWith<$Res> {
     $Res Function(RefreshTokenRequest) then,
   ) = _$RefreshTokenRequestCopyWithImpl<$Res, RefreshTokenRequest>;
   @useResult
-  $Res call({String refreshToken});
+  $Res call({@JsonKey(name: 'refresh_token') String refreshToken});
 }
 
 /// @nodoc
@@ -749,7 +765,7 @@ abstract class _$$RefreshTokenRequestImplCopyWith<$Res>
   ) = __$$RefreshTokenRequestImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String refreshToken});
+  $Res call({@JsonKey(name: 'refresh_token') String refreshToken});
 }
 
 /// @nodoc
@@ -780,12 +796,15 @@ class __$$RefreshTokenRequestImplCopyWithImpl<$Res>
 /// @nodoc
 @JsonSerializable()
 class _$RefreshTokenRequestImpl implements _RefreshTokenRequest {
-  const _$RefreshTokenRequestImpl({required this.refreshToken});
+  const _$RefreshTokenRequestImpl({
+    @JsonKey(name: 'refresh_token') required this.refreshToken,
+  });
 
   factory _$RefreshTokenRequestImpl.fromJson(Map<String, dynamic> json) =>
       _$$RefreshTokenRequestImplFromJson(json);
 
   @override
+  @JsonKey(name: 'refresh_token')
   final String refreshToken;
 
   @override
@@ -824,13 +843,15 @@ class _$RefreshTokenRequestImpl implements _RefreshTokenRequest {
 }
 
 abstract class _RefreshTokenRequest implements RefreshTokenRequest {
-  const factory _RefreshTokenRequest({required final String refreshToken}) =
-      _$RefreshTokenRequestImpl;
+  const factory _RefreshTokenRequest({
+    @JsonKey(name: 'refresh_token') required final String refreshToken,
+  }) = _$RefreshTokenRequestImpl;
 
   factory _RefreshTokenRequest.fromJson(Map<String, dynamic> json) =
       _$RefreshTokenRequestImpl.fromJson;
 
   @override
+  @JsonKey(name: 'refresh_token')
   String get refreshToken;
 
   /// Create a copy of RefreshTokenRequest
@@ -847,7 +868,9 @@ RefreshTokenResponse _$RefreshTokenResponseFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$RefreshTokenResponse {
+  @JsonKey(name: 'access_token')
   String get accessToken => throw _privateConstructorUsedError;
+  @JsonKey(name: 'token_type')
   String get tokenType => throw _privateConstructorUsedError;
 
   /// Serializes this RefreshTokenResponse to a JSON map.
@@ -867,7 +890,10 @@ abstract class $RefreshTokenResponseCopyWith<$Res> {
     $Res Function(RefreshTokenResponse) then,
   ) = _$RefreshTokenResponseCopyWithImpl<$Res, RefreshTokenResponse>;
   @useResult
-  $Res call({String accessToken, String tokenType});
+  $Res call({
+    @JsonKey(name: 'access_token') String accessToken,
+    @JsonKey(name: 'token_type') String tokenType,
+  });
 }
 
 /// @nodoc
@@ -913,7 +939,10 @@ abstract class _$$RefreshTokenResponseImplCopyWith<$Res>
   ) = __$$RefreshTokenResponseImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String accessToken, String tokenType});
+  $Res call({
+    @JsonKey(name: 'access_token') String accessToken,
+    @JsonKey(name: 'token_type') String tokenType,
+  });
 }
 
 /// @nodoc
@@ -949,16 +978,18 @@ class __$$RefreshTokenResponseImplCopyWithImpl<$Res>
 @JsonSerializable()
 class _$RefreshTokenResponseImpl implements _RefreshTokenResponse {
   const _$RefreshTokenResponseImpl({
-    required this.accessToken,
-    required this.tokenType,
+    @JsonKey(name: 'access_token') required this.accessToken,
+    @JsonKey(name: 'token_type') required this.tokenType,
   });
 
   factory _$RefreshTokenResponseImpl.fromJson(Map<String, dynamic> json) =>
       _$$RefreshTokenResponseImplFromJson(json);
 
   @override
+  @JsonKey(name: 'access_token')
   final String accessToken;
   @override
+  @JsonKey(name: 'token_type')
   final String tokenType;
 
   @override
@@ -1001,16 +1032,18 @@ class _$RefreshTokenResponseImpl implements _RefreshTokenResponse {
 
 abstract class _RefreshTokenResponse implements RefreshTokenResponse {
   const factory _RefreshTokenResponse({
-    required final String accessToken,
-    required final String tokenType,
+    @JsonKey(name: 'access_token') required final String accessToken,
+    @JsonKey(name: 'token_type') required final String tokenType,
   }) = _$RefreshTokenResponseImpl;
 
   factory _RefreshTokenResponse.fromJson(Map<String, dynamic> json) =
       _$RefreshTokenResponseImpl.fromJson;
 
   @override
+  @JsonKey(name: 'access_token')
   String get accessToken;
   @override
+  @JsonKey(name: 'token_type')
   String get tokenType;
 
   /// Create a copy of RefreshTokenResponse

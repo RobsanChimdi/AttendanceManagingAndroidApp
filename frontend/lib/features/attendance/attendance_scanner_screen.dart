@@ -331,14 +331,14 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
                       });
                     },
                     style: ButtonStyle(
-                      backgroundColor: MaterialStateProperty.resolveWith((states) {
-                        if (states.contains(MaterialState.selected)) {
-                          return AppColors.primary.withOpacity(0.1);
+                      backgroundColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.selected)) {
+                          return AppColors.primary.withValues(alpha: 0.1);
                         }
                         return AppColors.surfaceVariant;
                       }),
-                      foregroundColor: MaterialStateProperty.resolveWith((states) {
-                        if (states.contains(MaterialState.selected)) {
+                      foregroundColor: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.selected)) {
                           return AppColors.primary;
                         }
                         return AppColors.textSecondary;
@@ -397,7 +397,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         if (_sessionStats != null)
           AppCard(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            backgroundColor: AppColors.primary.withOpacity(0.05),
+            backgroundColor: AppColors.primary.withValues(alpha: 0.05),
             child: Column(
               children: [
                 Row(
@@ -523,7 +523,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         if (_sessionStats != null)
           AppCard(
             padding: const EdgeInsets.all(AppSpacing.lg),
-            backgroundColor: AppColors.primary.withOpacity(0.05),
+            backgroundColor: AppColors.primary.withValues(alpha: 0.05),
             child: Column(
               children: [
                 Row(
@@ -647,9 +647,9 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
                   child: Container(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                      border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [
@@ -701,7 +701,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
         height: 350,
         decoration: BoxDecoration(
           border: Border.all(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             width: 3,
           ),
           borderRadius: BorderRadius.circular(140),
@@ -716,7 +716,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
               child: Icon(
                 Icons.face,
                 size: 80,
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -730,7 +730,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
       width: 20,
       height: 20,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.7),
+        color: Colors.white.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -744,25 +744,25 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
 
     switch (_recognitionStatus) {
       case 'MATCH':
-        backgroundColor = AppColors.success.withOpacity(0.95);
+        backgroundColor = AppColors.success.withValues(alpha: 0.95);
         icon = Icons.check_circle;
         title = '✓ STUDENT RECOGNIZED';
         subtitle = _alreadyMarked ? 'Already marked present' : 'Marked present';
         break;
       case 'UNKNOWN':
-        backgroundColor = AppColors.warning.withOpacity(0.95);
+        backgroundColor = AppColors.warning.withValues(alpha: 0.95);
         icon = Icons.person_off;
         title = '? UNKNOWN PERSON';
         subtitle = 'No matching student found';
         break;
       case 'LOW_CONFIDENCE':
-        backgroundColor = AppColors.warning.withOpacity(0.95);
+        backgroundColor = AppColors.warning.withValues(alpha: 0.95);
         icon = Icons.help_outline;
         title = '! LOW CONFIDENCE';
         subtitle = 'Low confidence match';
         break;
       default:
-        backgroundColor = AppColors.textSecondary.withOpacity(0.95);
+        backgroundColor = AppColors.textSecondary.withValues(alpha: 0.95);
         icon = Icons.info_outline;
         title = 'Unknown Status';
         subtitle = null;
@@ -779,7 +779,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
           borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -802,7 +802,7 @@ class _AttendanceScannerScreenState extends ConsumerState<AttendanceScannerScree
               Padding(
                 padding: const EdgeInsets.only(top: AppSpacing.xs),
                 child: Text(
-                  subtitle!,
+                  subtitle,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,

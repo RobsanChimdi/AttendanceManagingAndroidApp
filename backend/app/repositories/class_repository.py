@@ -1,6 +1,7 @@
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from app.models.class_model import Class
+from app.models.attendance_session import AttendanceSession
 from app.repositories.base_repository import BaseRepository
 
 class ClassRepository(BaseRepository[Class]):
@@ -17,7 +18,15 @@ class ClassRepository(BaseRepository[Class]):
         return self.db.query(Class).filter(Class.grade == grade).offset(skip).limit(limit).all()
 
     def get_by_teacher(self, teacher_id: int, skip: int = 0, limit: int = 100) -> List[Class]:
-        return self.db.query(Class).filter(Class.teacher_id == teacher_id).offset(skip).limit(limit).all()
+        return (
+            self.db.query(Class)
+            .join(AttendanceSession, Class.id == AttendanceSession.class_id)
+            .filter(AttendanceSession.teacher_id == teacher_id)
+            .distinct()
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
     def get_all_count(self) -> int:
         return self.db.query(Class).count()

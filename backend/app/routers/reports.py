@@ -12,6 +12,113 @@ from app.utils.pdf_export import PDFExportUtility
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
 
+def _attendance_report_response(records, total_count, skip, limit, summary=None):
+    response = {"records": records, "total": total_count, "skip": skip, "limit": limit}
+    if summary is not None:
+        response["summary"] = summary
+    return response
+
+
+@router.get("/attendance")
+async def get_attendance_report(
+    report_date: Optional[date] = Query(None),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    grade: Optional[str] = Query(None),
+    class_id: Optional[int] = Query(None),
+    section: Optional[str] = Query(None),
+    student_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    method: Optional[str] = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+):
+    """Return real attendance records using the complete report filter set."""
+    if report_date and (date_from or date_to):
+        raise HTTPException(status_code=400, detail="Use report_date or a date range, not both")
+    try:
+        repository = ReportRepository(db)
+        records, total_count = repository.get_attendance_records_with_filters(
+            date=report_date, date_from=date_from, date_to=date_to, grade=grade,
+            class_id=class_id, section=section, student_id=student_id,
+            status=status, method=method, skip=skip, limit=limit,
+        )
+        return _attendance_report_response(
+            records, total_count, skip, limit, repository._calculate_summary(records)
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to generate attendance report")
+
+
+@router.get("/attendance/csv")
+async def export_attendance_csv(
+    report_date: Optional[date] = Query(None),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    grade: Optional[str] = Query(None),
+    class_id: Optional[int] = Query(None),
+    section: Optional[str] = Query(None),
+    student_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    method: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Export the complete filtered attendance report as CSV."""
+    if report_date and (date_from or date_to):
+        raise HTTPException(status_code=400, detail="Use report_date or a date range, not both")
+    try:
+        records, _ = ReportRepository(db).get_attendance_records_with_filters(
+            date=report_date, date_from=date_from, date_to=date_to, grade=grade,
+            class_id=class_id, section=section, student_id=student_id,
+            status=status, method=method, skip=0, limit=100000,
+        )
+        filename, csv_content = CSVExportUtility.generate_attendance_csv(records)
+        return Response(content=csv_content, media_type="text/csv", headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        })
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to export attendance report")
+
+
+@router.get("/attendance/pdf")
+async def export_attendance_pdf(
+    report_date: Optional[date] = Query(None),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    grade: Optional[str] = Query(None),
+    class_id: Optional[int] = Query(None),
+    section: Optional[str] = Query(None),
+    student_id: Optional[int] = Query(None),
+    status: Optional[str] = Query(None),
+    method: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """Export the complete filtered attendance report as PDF."""
+    if report_date and (date_from or date_to):
+        raise HTTPException(status_code=400, detail="Use report_date or a date range, not both")
+    try:
+        records, _ = ReportRepository(db).get_attendance_records_with_filters(
+            date=report_date, date_from=date_from, date_to=date_to, grade=grade,
+            class_id=class_id, section=section, student_id=student_id,
+            status=status, method=method, skip=0, limit=100000,
+        )
+        filename, pdf_content = PDFExportUtility.generate_attendance_pdf(
+            records=records, title="Attendance Report"
+        )
+        return Response(content=pdf_content, media_type="application/pdf", headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        })
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to export attendance report")
+
+
 @router.get("/attendance/daily")
 async def get_daily_attendance_report(
     report_date: date = Query(..., description="Date of the report"),
