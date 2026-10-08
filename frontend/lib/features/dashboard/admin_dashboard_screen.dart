@@ -10,20 +10,66 @@ import '../../providers/auth_provider.dart';
 import '../../services/dashboard_service.dart';
 import '../../services/websocket_service.dart';
 
+List<PopupMenuEntry<String>> buildAdminDashboardMenuItems([
+  BuildContext? context,
+]) {
+  return const [
+    PopupMenuItem<String>(
+      value: 'students',
+      child: Row(
+        children: [Icon(Icons.people), SizedBox(width: 8), Text('Students')],
+      ),
+    ),
+    PopupMenuItem<String>(
+      value: 'critical-attendance',
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded),
+          SizedBox(width: 8),
+          Text('Critical Attendance'),
+        ],
+      ),
+    ),
+    PopupMenuItem<String>(
+      value: 'analytics',
+      child: Row(
+        children: [
+          Icon(Icons.analytics),
+          SizedBox(width: 8),
+          Text('Analytics'),
+        ],
+      ),
+    ),
+    PopupMenuItem<String>(
+      value: 'reports',
+      child: Row(
+        children: [Icon(Icons.assessment), SizedBox(width: 8), Text('Reports')],
+      ),
+    ),
+  ];
+}
+
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  ConsumerState<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   final DashboardService _dashboardService = DashboardService();
-  final RefreshController _refreshController = RefreshController(initialRefresh: true);
-  
+  final RefreshController _refreshController = RefreshController();
+
   bool _isLoading = false;
   String? _errorMessage;
   Map<String, dynamic>? _statistics;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStatistics();
+  }
 
   @override
   void dispose() {
@@ -31,9 +77,28 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     super.dispose();
   }
 
+  void _handleMenuAction(String value) {
+    switch (value) {
+      case 'students':
+        context.push('/students');
+        break;
+      case 'critical-attendance':
+        context.push('/students/critical-attendance');
+        break;
+      case 'analytics':
+        context.push('/analytics');
+        break;
+      case 'reports':
+        context.push('/reports');
+        break;
+    }
+  }
+
   Future<void> _loadStatistics() async {
+    final shouldShowLoader = _statistics == null;
+
     setState(() {
-      _isLoading = true;
+      _isLoading = shouldShowLoader;
       _errorMessage = null;
     });
 
@@ -68,12 +133,19 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     ref.listen(notificationStreamProvider, (previous, next) {
       next.whenData((payload) {
         if (!context.mounted) return;
-        final message = payload['message'] ?? payload['title'] ?? 'New notification received';
+        final message =
+            payload['message'] ??
+            payload['title'] ??
+            'New notification received';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.notifications_active, color: Colors.white, size: 20),
+                const Icon(
+                  Icons.notifications_active,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(child: Text(message.toString())),
               ],
@@ -90,6 +162,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Dashboard menu',
+            icon: const Icon(Icons.menu),
+            onSelected: _handleMenuAction,
+            itemBuilder: (BuildContext context) =>
+                buildAdminDashboardMenuItems(),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
@@ -104,168 +183,105 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null
-              ? _buildErrorView()
-              : _statistics == null
-                  ? _buildEmptyView()
-                  : SmartRefresher(
-                      controller: _refreshController,
-                      onRefresh: _onRefresh,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.all(16.0),
+          ? _buildErrorView()
+          : _statistics == null
+          ? _buildEmptyView()
+          : SmartRefresher(
+              controller: _refreshController,
+              onRefresh: _onRefresh,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Welcome section
+                    if (user != null)
+                      AppCard(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Welcome section
-                            if (user != null)
-                              AppCard(
-                                padding: const EdgeInsets.all(AppSpacing.lg),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Welcome, ${user.name}',
-                                      style: AppTextStyles.headlineSmall.copyWith(
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: AppSpacing.sm),
-                                    Text(
-                                      'Administrator',
-                                      style: AppTextStyles.bodyMedium.copyWith(
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                    const SizedBox(height: AppSpacing.sm),
-                                    Text(
-                                      user.email,
-                                      style: AppTextStyles.bodySmall.copyWith(
-                                        color: AppColors.textHint,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            const SizedBox(height: 24),
-                            
-                            // Statistics cards
-                            GridView.count(
-                              crossAxisCount: 2,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              mainAxisSpacing: AppSpacing.md,
-                              crossAxisSpacing: AppSpacing.md,
-                              childAspectRatio: 1.3,
-                              children: [
-                                StatCard(
-                                  title: 'Total Students',
-                                  value: '${_statistics!['total_students'] ?? 0}',
-                                  icon: Icons.people,
-                                  color: AppColors.primary,
-                                ),
-                                StatCard(
-                                  title: 'Total Teachers',
-                                  value: '${_statistics!['total_teachers'] ?? 0}',
-                                  icon: Icons.person,
-                                  color: AppColors.warning,
-                                ),
-                                StatCard(
-                                  title: 'Today\'s Attendance',
-                                  value: '${_statistics!['present_today'] ?? 0}',
-                                  icon: Icons.check_circle,
-                                  color: AppColors.success,
-                                ),
-                                StatCard(
-                                  title: 'Average Attendance',
-                                  value: '${_statistics!['average_attendance']?.toStringAsFixed(1) ?? '0'}%',
-                                  icon: Icons.trending_up,
-                                  color: AppColors.secondary,
-                                ),
-                                StatCard(
-                                  title: 'Critical Students',
-                                  value: '${_statistics!['critical_students'] ?? 0}',
-                                  icon: Icons.warning,
-                                  color: AppColors.error,
-                                ),
-                                StatCard(
-                                  title: 'Classes',
-                                  value: '${_statistics!['total_classes'] ?? 0}',
-                                  icon: Icons.class_,
-                                  color: AppColors.info,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-                            
-                            // Quick actions
                             Text(
-                              'Quick Actions',
-                              style: AppTextStyles.titleLarge.copyWith(
-                                color: AppColors.textPrimary,
+                              'Welcome, ${user.name}',
+                              style: AppTextStyles.headlineSmall.copyWith(
+                                color: AppColors.primary,
                               ),
                             ),
-                            const SizedBox(height: AppSpacing.md),
-                            GridView.count(
-                              crossAxisCount: 2,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              mainAxisSpacing: AppSpacing.md,
-                              crossAxisSpacing: AppSpacing.md,
-                              childAspectRatio: 1.5,
-                              children: [
-                                ActionCard(
-                                  title: 'Manage Students',
-                                  icon: Icons.people,
-                                  onTap: () {
-                                    context.push('/students');
-                                  },
-                                ),
-                                ActionCard(
-                                  title: 'Manage Classes',
-                                  icon: Icons.class_,
-                                  onTap: () {
-                                    // TODO: Navigate to classes management
-                                  },
-                                ),
-                                ActionCard(
-                                  title: 'Manage Teachers',
-                                  icon: Icons.person,
-                                  onTap: () {
-                                    // TODO: Navigate to teachers management
-                                  },
-                                ),
-                                ActionCard(
-                                  title: 'Critical Attendance',
-                                  icon: Icons.warning,
-                                  color: AppColors.error,
-                                  onTap: () {
-                                    context.push('/students/critical-attendance');
-                                  },
-                                ),
-                                ActionCard(
-                                  title: 'Analytics',
-                                  icon: Icons.analytics,
-                                  onTap: () {
-                                    context.push('/analytics');
-                                  },
-                                ),
-                                ActionCard(
-                                  title: 'Reports',
-                                  icon: Icons.assessment,
-                                  onTap: () {
-                                    context.push('/reports');
-                                  },
-                                ),
-                              ],
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'Administrator',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              user.email,
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.textHint,
+                              ),
+                            ),
                           ],
                         ),
                       ),
+                    const SizedBox(height: 24),
+
+                    // Statistics cards
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: AppSpacing.md,
+                      crossAxisSpacing: AppSpacing.md,
+                      childAspectRatio: 1.3,
+                      children: [
+                        StatCard(
+                          title: 'Total Students',
+                          value: '${_statistics!['total_students'] ?? 0}',
+                          icon: Icons.people,
+                          color: AppColors.primary,
+                        ),
+                        StatCard(
+                          title: 'Total Teachers',
+                          value: '${_statistics!['total_teachers'] ?? 0}',
+                          icon: Icons.person,
+                          color: AppColors.warning,
+                        ),
+                        StatCard(
+                          title: 'Today\'s Attendance',
+                          value: '${_statistics!['present_today'] ?? 0}',
+                          icon: Icons.check_circle,
+                          color: AppColors.success,
+                        ),
+                        StatCard(
+                          title: 'Average Attendance',
+                          value:
+                              '${_statistics!['average_attendance']?.toStringAsFixed(1) ?? '0'}%',
+                          icon: Icons.trending_up,
+                          color: AppColors.secondary,
+                        ),
+                        StatCard(
+                          title: 'Critical Students',
+                          value: '${_statistics!['critical_students'] ?? 0}',
+                          icon: Icons.warning,
+                          color: AppColors.error,
+                        ),
+                        StatCard(
+                          title: 'Classes',
+                          value: '${_statistics!['total_classes'] ?? 0}',
+                          icon: Icons.class_,
+                          color: AppColors.info,
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
     );
   }
-
 
   Widget _buildErrorView() {
     return Center(
@@ -321,10 +337,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            'Pull to refresh',
-            style: TextStyle(color: AppColors.textHint),
-          ),
+          Text('Pull to refresh', style: TextStyle(color: AppColors.textHint)),
         ],
       ),
     );

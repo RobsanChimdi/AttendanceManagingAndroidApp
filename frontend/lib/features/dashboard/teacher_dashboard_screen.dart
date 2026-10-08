@@ -18,12 +18,59 @@ class TeacherDashboardScreen extends ConsumerStatefulWidget {
       _TeacherDashboardScreenState();
 }
 
+List<PopupMenuEntry<String>> buildTeacherDashboardMenuItems([
+  BuildContext? context,
+]) {
+  return const [
+    PopupMenuItem<String>(
+      value: 'start-attendance',
+      child: Row(
+        children: [
+          Icon(Icons.play_circle_outline),
+          SizedBox(width: 8),
+          Text('Start Attendance'),
+        ],
+      ),
+    ),
+    PopupMenuItem<String>(
+      value: 'students',
+      child: Row(
+        children: [Icon(Icons.people), SizedBox(width: 8), Text('Students')],
+      ),
+    ),
+    PopupMenuItem<String>(
+      value: 'critical-attendance',
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded),
+          SizedBox(width: 8),
+          Text('Critical Attendance'),
+        ],
+      ),
+    ),
+    PopupMenuItem<String>(
+      value: 'analytics',
+      child: Row(
+        children: [
+          Icon(Icons.analytics),
+          SizedBox(width: 8),
+          Text('Analytics'),
+        ],
+      ),
+    ),
+    PopupMenuItem<String>(
+      value: 'reports',
+      child: Row(
+        children: [Icon(Icons.assessment), SizedBox(width: 8), Text('Reports')],
+      ),
+    ),
+  ];
+}
+
 class _TeacherDashboardScreenState
     extends ConsumerState<TeacherDashboardScreen> {
   final DashboardService _dashboardService = DashboardService();
-  final RefreshController _refreshController = RefreshController(
-    initialRefresh: true,
-  );
+  final RefreshController _refreshController = RefreshController();
 
   bool _isLoading = false;
   String? _errorMessage;
@@ -42,8 +89,10 @@ class _TeacherDashboardScreenState
   }
 
   Future<void> _loadStatistics() async {
+    final shouldShowLoader = _statistics == null;
+
     setState(() {
-      _isLoading = true;
+      _isLoading = shouldShowLoader;
       _errorMessage = null;
     });
 
@@ -75,6 +124,26 @@ class _TeacherDashboardScreenState
   void _onRefresh() async {
     await _loadStatistics();
     _refreshController.refreshCompleted();
+  }
+
+  void _handleMenuAction(String value) {
+    switch (value) {
+      case 'start-attendance':
+        context.push('/attendance/start');
+        break;
+      case 'students':
+        context.push('/students');
+        break;
+      case 'critical-attendance':
+        context.push('/students/critical-attendance');
+        break;
+      case 'analytics':
+        context.push('/analytics');
+        break;
+      case 'reports':
+        context.push('/reports');
+        break;
+    }
   }
 
   @override
@@ -114,6 +183,13 @@ class _TeacherDashboardScreenState
       appBar: AppBar(
         title: const Text('Teacher Dashboard'),
         actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Dashboard menu',
+            icon: const Icon(Icons.menu),
+            onSelected: _handleMenuAction,
+            itemBuilder: (BuildContext context) =>
+                buildTeacherDashboardMenuItems(),
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
@@ -217,76 +293,6 @@ class _TeacherDashboardScreenState
                           value: '${_statistics!['total_classes'] ?? 0}',
                           icon: Icons.class_,
                           color: AppColors.info,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Quick actions
-                    Text(
-                      'Quick Actions',
-                      style: AppTextStyles.titleLarge.copyWith(
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: AppSpacing.md,
-                      crossAxisSpacing: AppSpacing.md,
-                      childAspectRatio: 1.5,
-                      children: [
-                        ActionCard(
-                          title: 'Start Attendance',
-                          icon: Icons.play_circle,
-                          onTap: () {
-                            context.push('/attendance/start');
-                          },
-                        ),
-                        ActionCard(
-                          title: 'Scan QR',
-                          icon: Icons.qr_code_scanner,
-                          onTap: () {
-                            context.push('/attendance/start');
-                          },
-                        ),
-                        ActionCard(
-                          title: 'Add Student',
-                          icon: Icons.person_add,
-                          onTap: () {
-                            context.push('/students/add');
-                          },
-                        ),
-                        ActionCard(
-                          title: 'Students',
-                          icon: Icons.people,
-                          onTap: () {
-                            context.push('/students');
-                          },
-                        ),
-                        ActionCard(
-                          title: 'Critical Attendance',
-                          icon: Icons.warning,
-                          color: AppColors.error,
-                          onTap: () {
-                            context.push('/students/critical-attendance');
-                          },
-                        ),
-                        ActionCard(
-                          title: 'Analytics',
-                          icon: Icons.analytics,
-                          onTap: () {
-                            context.push('/analytics');
-                          },
-                        ),
-                        ActionCard(
-                          title: 'Reports',
-                          icon: Icons.assessment,
-                          onTap: () {
-                            context.push('/reports');
-                          },
                         ),
                       ],
                     ),
