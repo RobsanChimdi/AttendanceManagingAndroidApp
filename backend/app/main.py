@@ -1,6 +1,10 @@
 import logging
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import Base, engine, get_db, check_db_connection
@@ -9,18 +13,21 @@ from app.database import Base, engine, get_db, check_db_connection
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("main")
 
-# Import models to ensure they are registered with Base metadata before create_all
-# Note: This import is deferred to avoid blocking startup if database is unavailable
-try:
-    import app.models
-    # Create tables in development environment (simplistic migrations for foundation)
+# Rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup/shutdown events."""
+    logger.info("Starting up EDUTRACK AI Backend...")
+    # Verify database connection (non-blocking)
     try:
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables initialized successfully.")
+        check_db_connection()
     except Exception as e:
-        logger.warning(f"Could not automatically initialize database tables: {e}")
-except Exception as e:
-    logger.warning(f"Could not import models: {e}")
+        logger.warning(f"Database connection check failed during startup: {e}")
+
+    yield  # Application runs here
 
 
 # Initialize FastAPI App
@@ -28,40 +35,41 @@ app = FastAPI(
     title="EDUTRACK AI API",
     description="Smart Student Attendance Management System REST API",
     version="1.0.0",
-    debug=settings.DEBUG
+    debug=settings.DEBUG,
+    lifespan=lifespan
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Include routers
 from app.routers.auth import router as auth_router
 from app.routers.students import router as students_router
+from app.routers.classes import router as classes_router
+from app.routers.attendance import router as attendance_router
+from app.routers.notifications import router as notifications_router
+from app.routers.dashboard import router as dashboard_router
+from app.routers.reports import router as reports_router
+from app.routers.websocket import router as websocket_router
 app.include_router(auth_router)
 app.include_router(students_router)
+app.include_router(classes_router)
+app.include_router(attendance_router)
+app.include_router(notifications_router)
+app.include_router(dashboard_router)
+app.include_router(reports_router)
+app.include_router(websocket_router)
 
 
-# CORS configurations
+
+# CORS configuration — reads from ALLOWED_ORIGINS env var (default: * for development)
+allowed_origins = settings.get_allowed_origins_list()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Set to specific origins in production
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=allowed_origins,
+    allow_credentials=allowed_origins != ["*"],  # credentials only when specific origins set
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Starting up EDUTRACK AI Backend...")
-    # Verify database connection (non-blocking)
-    try:
-        check_db_connection()
-    except Exception as e:
-        logger.warning(f"Database connection check failed during startup: {e}")
-    
-    # Check/download facial recognition models (non-blocking)
-    try:
-        from app.facial_recognition.service import face_recognition_service
-        face_recognition_service.download_models_if_missing()
-    except Exception as e:
-        logger.warning(f"Facial recognition model setup failed during startup: {e}")
 
 @app.get("/")
 def read_root():
