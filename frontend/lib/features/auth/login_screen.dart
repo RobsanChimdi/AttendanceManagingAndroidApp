@@ -44,6 +44,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await ref.read(authProvider.notifier).login(email, password);
   }
 
+  void _handleForgotPassword() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Password reset is coming soon. Please contact your admin.',
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.primary,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -114,7 +127,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xxxl),
-                  
+
                   // Email field
                   AppInput(
                     label: 'Email Address',
@@ -127,7 +140,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please enter your email';
                       }
-                      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                      final emailRegex = RegExp(
+                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                      );
                       if (!emailRegex.hasMatch(value.trim())) {
                         return 'Please enter a valid email';
                       }
@@ -136,7 +151,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     enabled: !authState.isLoading,
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  
+
                   // Password field
                   AppInput(
                     label: 'Password',
@@ -170,20 +185,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     enabled: !authState.isLoading,
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  
+
                   // Forgot password link
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: !authState.isLoading
-                          ? () {
-                              // TODO: Implement forgot password
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Forgot password feature coming soon'),
-                                ),
-                              );
-                            }
+                          ? _handleForgotPassword
                           : null,
                       child: const Text(
                         'Forgot Password?',
@@ -192,7 +200,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  
+
                   // Error message
                   if (_errorMessage != null)
                     Container(
@@ -200,12 +208,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
                         color: AppColors.error.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                        border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusMd,
+                        ),
+                        border: Border.all(
+                          color: AppColors.error.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline, color: AppColors.error, size: 20),
+                          const Icon(
+                            Icons.error_outline,
+                            color: AppColors.error,
+                            size: 20,
+                          ),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(
@@ -219,7 +235,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ],
                       ),
                     ),
-                  
+
                   // Login button
                   AppButton(
                     text: 'Login',
@@ -228,17 +244,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     isFullWidth: true,
                     type: ButtonType.primary,
                   ),
-                  
+
                   const SizedBox(height: AppSpacing.xl),
-                  
+
                   // Footer
                   const Text(
                     'EduTrack AI - Government Education Platform',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textHint,
-                    ),
+                    style: TextStyle(fontSize: 12, color: AppColors.textHint),
                   ),
                 ],
               ),

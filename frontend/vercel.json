@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "installCommand": "bash -lc 'git clone --depth 1 https://github.com/flutter/flutter.git /tmp/flutter; export PATH=\"/tmp/flutter/bin:$PATH\"; flutter --version; flutter pub get'",
+  "buildCommand": "bash -lc 'export PATH=\"/tmp/flutter/bin:$PATH\"; flutter build web --release --dart-define=API_URL=${API_URL:-https://api.example.com}'",
+  "outputDirectory": "build/web",
+  "routes": [
+    {
+      "src": "/assets/(.*)",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
